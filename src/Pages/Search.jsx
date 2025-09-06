@@ -11,21 +11,20 @@ const Search = () => {
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [priceRange, setPriceRange] = useState({ min: 0, max: Infinity });
+  const [priceRange, setPriceRange] = useState({ min: 0, max: 1000 });
   const [minRating, setMinRating] = useState(0);
   const [sortOption, setSortOption] = useState("default");
+
   useEffect(() => {
     const fetchProducts = async () => {
       setLoading(true);
       setError(null);
 
-      let customMessage = ""; // To store custom text for mobile/mobiles
-
+      let customMessage = "";
       try {
         let categoryData = decodedCategory.split("_");
         let allProducts = [];
 
-        // First attempt: Fetch products by category
         const response = await Promise.all(
           categoryData.map(async (cat) => {
             try {
@@ -41,10 +40,8 @@ const Search = () => {
         );
         allProducts = response.flat();
 
-        // Fallback: If no products found, try search API
         if (allProducts.length === 0) {
           let fallbackCategory = decodedCategory;
-          // Check for mobile or mobiles and add custom text
           if (
             fallbackCategory.toLowerCase() === "mobile" ||
             fallbackCategory.toLowerCase() === "mobiles"
@@ -83,11 +80,9 @@ const Search = () => {
           }
         }
 
-        // Update state with fetched products
         setProducts(allProducts);
         setFilteredProducts(allProducts);
 
-        // Set custom message or error if no products are found
         if (allProducts.length === 0 && !error) {
           setError(
             customMessage ||
@@ -106,226 +101,223 @@ const Search = () => {
     }
   }, [decodedCategory]);
 
+  // Filter and sort products
   useEffect(() => {
     let updatedProducts = [...products];
 
-    // Filter by price range
+    // Apply price filter
     updatedProducts = updatedProducts.filter(
       (product) =>
-        product.price >= priceRange.min &&
-        product.price <= (priceRange.max || Infinity)
+        product.price >= priceRange.min && product.price <= priceRange.max
     );
 
-    // Filter by minimum rating
+    // Apply rating filter
     updatedProducts = updatedProducts.filter(
       (product) => product.rating >= minRating
     );
 
-    // Sort products
-    if (sortOption === "priceLowToHigh") {
+    // Apply sorting
+    if (sortOption === "price-low-high") {
       updatedProducts.sort((a, b) => a.price - b.price);
-    } else if (sortOption === "priceHighToLow") {
+    } else if (sortOption === "price-high-low") {
       updatedProducts.sort((a, b) => b.price - a.price);
-    } else if (sortOption === "ratingHighToLow") {
-      updatedProducts.sort((a, b) => b.rating - a.rating);
     }
 
     setFilteredProducts(updatedProducts);
-  }, [products, priceRange, minRating, sortOption]);
+  }, [priceRange, minRating, sortOption, products]);
 
-  const handleProductClick = (id) => {
-    navigate(`/product-details/${id}`);
-  };
-
-  const handlePriceFilter = (e) => {
+  // Handle filter changes
+  const handlePriceChange = (e) => {
     const { name, value } = e.target;
-    setPriceRange((prev) => ({
-      ...prev,
-      [name]: value === "" ? (name === "min" ? 0 : Infinity) : Number(value),
-    }));
+    setPriceRange((prev) => ({ ...prev, [name]: Number(value) }));
   };
 
-  const handleRatingFilter = (rating) => {
-    setMinRating(rating);
+  const handleRatingChange = (e) => {
+    setMinRating(Number(e.target.value));
   };
 
   const handleSortChange = (e) => {
-    setSortOption(e.target.value);
+    setSortOption(e);
   };
 
   return (
-    <div className="mt-34 md:mt-25 px-4 md:px-6 max-w-7xl mx-auto min-h-screen">
-      {/* Filter and Sort Section */}
-      <div className="bg-white text-black p-4 rounded-lg shadow mb-2">
-        <div className="mb-6 flex flex-col md:flex-row gap-4">
-          <div className="flex flex-col w-full md:w-1/3">
-            <h3 className="text-lg font-semibold mb-2">Filter by Price</h3>
+    <div className="mt-32 md:mt-25  md:px-6 max-w-7xl mx-auto min-h-screen text-black">
+      {loading && <div className="text-center text-gray-600">Loading...</div>}
+      {error && <div className="text-center text-red-500">{error}</div>}
+
+      <div className="flex flex-col md:flex-row gap-6">
+        {/* Filter Sidebar */}
+        <div className="w-full md:w-1/4 bg-white p-4 shadow-md rounded-lg">
+          <h2 className="text-lg font-bold text-gray-800 mb-4">Filters</h2>
+
+          {/* Price Filter */}
+          <div className="mb-6">
+            <h3 className="text-md font-semibold text-gray-700 mb-2">Price</h3>
             <div className="flex gap-2">
               <input
                 type="number"
                 name="min"
-                placeholder="Min Price"
-                className="border rounded-lg p-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-300"
-                onChange={handlePriceFilter}
-                value={priceRange.min === 0 ? "" : priceRange.min}
-                min="0"
-                aria-label="Minimum price filter"
+                value={priceRange.min}
+                onChange={handlePriceChange}
+                placeholder="Min"
+                className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <input
                 type="number"
                 name="max"
-                placeholder="Max Price"
-                className="border rounded-lg p-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-300"
-                onChange={handlePriceFilter}
-                value={priceRange.max === Infinity ? "" : priceRange.max}
-                min="0"
-                aria-label="Maximum price filter"
+                value={priceRange.max}
+                onChange={handlePriceChange}
+                placeholder="Max"
+                className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
           </div>
 
-          <div className="flex flex-col w-full md:w-1/3">
-            <h3 className="text-lg font-semibold mb-2">Filter by Rating</h3>
-            <div className="flex gap-2">
-              {[1, 2, 3, 4].map((rating) => (
-                <button
-                  key={rating}
-                  className={`px-3 py-1 rounded-lg ${
-                    minRating === rating
-                      ? "bg-blue-600 text-white"
-                      : "bg-gray-200 text-gray-800 hover:bg-gray-300"
-                  } transition-colors duration-200`}
-                  onClick={() => handleRatingFilter(rating)}
-                  aria-label={`Filter by ${rating} star rating or higher`}
-                >
-                  {rating}★+
-                </button>
-              ))}
-              <button
-                className={`px-3 py-1 rounded-lg ${
-                  minRating === 0
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-200 text-gray-800 hover:bg-gray-300"
-                } transition-colors duration-200`}
-                onClick={() => handleRatingFilter(0)}
-                aria-label="Clear rating filter"
-              >
-                All
-              </button>
-            </div>
-          </div>
-
-          <div className="flex flex-col w-full md:w-1/3">
-            <h3 className="text-lg font-semibold mb-2">Sort By</h3>
+          {/* Rating Filter */}
+          <div className="text-black">
+            <h3 className="text-md font-semibold text-gray-700 mb-2">Rating</h3>
             <select
-              className="border rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-300"
-              value={sortOption}
-              onChange={handleSortChange}
-              aria-label="Sort products"
+              value={minRating}
+              onChange={handleRatingChange}
+              className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="default">Default</option>
-              <option value="priceLowToHigh">Price: Low to High</option>
-              <option value="priceHighToLow">Price: High to Low</option>
-              <option value="ratingHighToLow">Rating: High to Low</option>
+              <option value={0}>All Ratings</option>
+              <option value={1}>1 Star & Up</option>
+              <option value={2}>2 Stars & Up</option>
+              <option value={3}>3 Stars & Up</option>
+              <option value={4}>4 Stars & Up</option>
             </select>
           </div>
         </div>
-      </div>
-      {/* Loading, Error, and Empty States */}
-      {loading && (
-        <div className="text-center text-gray-500 text-lg">
-          Loading products...
-        </div>
-      )}
 
-      {error && (
-        <div className="text-center text-red-500 text-lg">Error: {error}</div>
-      )}
-
-      {!loading && !error && filteredProducts.length === 0 && (
-        <div className="text-center text-gray-500 text-lg">
-          No products found for "{decodedCategory}"
-        </div>
-      )}
-
-      {/* Product Grid */}
-      {!loading && !error && filteredProducts.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {filteredProducts.map((product) => (
-            <div
-              key={product.id}
-              className="w-full max-w-sm bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-gray-200 transition-shadow duration-200"
-            >
-              <div
-                className="flex justify-center items-center h-48 p-6"
-                onClick={() => handleProductClick(product.id)}
-                role="button"
-                tabIndex={0}
-                onKeyPress={(e) =>
-                  e.key === "Enter" && handleProductClick(product.id)
-                }
-                aria-label={`View details for ${product.title}`}
-              >
-                <img
-                  className="w-full h-full object-contain cursor-pointer"
-                  src={product.thumbnail}
-                  alt={product.title || "Product image"}
-                />
-              </div>
-              <div className="px-5 pb-5 flex flex-col gap-3">
-                <h5
-                  className="text-lg font-medium text-gray-900 cursor-pointer line-clamp-2 min-h-[2.5em]"
-                  onClick={() => handleProductClick(product.id)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyPress={(e) =>
-                    e.key === "Enter" && handleProductClick(product.id)
-                  }
-                  title={product.title} // Full title on hover for long titles
-                >
-                  {product.title}
-                </h5>
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center space-x-1">
-                    {[...Array(5)].map((_, index) => (
-                      <svg
-                        key={index}
-                        className={`w-4 h-4 ${
-                          index < Math.round(product.rating)
-                            ? "text-yellow-400"
-                            : "text-gray-300"
-                        }`}
-                        aria-hidden="true"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="currentColor"
-                        viewBox="0 0 22 20"
-                      >
-                        <path d="M20.924 7.625a1.523 1.523 0 0 0-1.238-1.044l-5.051-.734-2.259-4.577a1.534 1.534 0 0 0-2.752 0L7.365 5.847l-5.051.734A1.535 1.535 0 0 0 1.463 9.2l3.656 3.563-.863 5.031a1.532 1.532 0 0 0 2.226 1.616L11 17.033l4.518 2.375a1.534 1.534 0 0 0 2.226-1.617l-.863-5.03L20.537 9.2a1.523 1.523 0 0 0 .387-1.575Z" />
-                      </svg>
-                    ))}
-                  </div>
-                  <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded">
-                    {product.rating}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between mt-3">
-                  <span className="text-xl font-bold text-gray-900">
-                    ${product.price.toFixed(2)}
-                  </span>
+        {/* Product List */}
+        <div className="w-full bg-white p-4 shadow-md rounded-lg">
+          <div className="w-full bg-white p-6 shadow-md rounded-lg">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6">
+              <h2 className="text-lg font-bold text-gray-800 capitalize">
+                {decodedCategory || "Products"}
+              </h2>
+              <div className="flex items-center gap-4 mt-4 sm:mt-0">
+                <label className="text-sm font-semibold text-gray-700">
+                  Sort By:
+                </label>
+                <div className="flex gap-4 flex-wrap">
                   <button
-                    className="text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-2 transition-colors duration-200"
-                    aria-label={`Add ${product.title} to cart`}
-                      
+                    onClick={() => handleSortChange("default")}
+                    className={`text-sm ${
+                      sortOption === "default"
+                        ? "text-blue-600 font-semibold"
+                        : "text-gray-600"
+                    } hover:text-blue-500 transition-colors`}
+                    aria-pressed={sortOption === "default"}
                   >
-                   ADD TO CART
+                    Default
                   </button>
-                 
+                  <button
+                    onClick={() => handleSortChange("price-low-high")}
+                    className={`text-sm ${
+                      sortOption === "price-low-high"
+                        ? "text-blue-600 font-semibold"
+                        : "text-gray-600"
+                    } hover:text-blue-500 transition-colors`}
+                    aria-pressed={sortOption === "price-low-high"}
+                  >
+                    Price: Low to High
+                  </button>
+                  <button
+                    onClick={() => handleSortChange("price-high-low")}
+                    className={`text-sm ${
+                      sortOption === "price-high-low"
+                        ? "text-blue-600 font-semibold"
+                        : "text-gray-600"
+                    } hover:text-blue-500 transition-colors`}
+                    aria-pressed={sortOption === "price-high-low"}
+                  >
+                    Price: High to Low
+                  </button>
                 </div>
               </div>
             </div>
-          ))}
+          </div>
+          &nbsp;
+          {/* Product Grid */}
+          <div className="">
+            {filteredProducts.length > 0 ? (
+              filteredProducts.map((product) => (
+                <div
+                  key={product.id}
+                  className=" hover:bg-gray-100 transition-shadow cursor-pointer"
+                  onClick={() => navigate(`/product-details/${product.id}`)}
+                >
+                  <div className="flex justify-between space-y-2">
+                    <div>
+                      <img
+                        className="w-full h-48 object-contain mb-4"
+                        src={product.thumbnail}
+                        alt={product.title || "Product image"}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <h3 className="text-md font-bold   text-gray-800 truncate">
+                        {product.title}
+                      </h3>
+
+                      <p className="">
+                        Rating:{" "}
+                        <span className="font-medium">
+                          {product.rating.toFixed(1)} / 5
+                        </span>
+                      </p>
+                      <p className="text-sm">
+                        Discount:{" "}
+                        <span className="font-medium">
+                          {product.discountPercentage.toFixed(2)}%
+                        </span>
+                      </p>
+                      <p className="text-sm">
+                        Stock:{" "}
+                        <span className="font-medium">
+                          {product.stock ? "In Stock" : "Out of Stock"}
+                        </span>
+                      </p>
+                      <p className="text-sm ">
+                        Brand:{" "}
+                        <span className="font-medium">
+                          {product.brand || "N/A"}
+                        </span>
+                      </p>
+
+                      <p className="text-sm">
+                        Category:{" "}
+                        <span className="font-medium">
+                          {product.category || "N/A"}
+                        </span>
+                      </p>
+                       <p className="text-sm ">
+                        ReturnPolicy:{" "}
+                        <span className="font-medium">
+                          {product.returnPolicy}
+                        </span>
+                      </p>
+                    </div>
+
+                    <div className="p-4">
+                      <p className="text-lg font-bold ">
+                        $ {product.price.toFixed(2)}
+                      </p>
+                    </div>
+                  </div>
+                  <hr />
+                </div>
+              ))
+            ) : (
+              <div className="col-span-full text-center text-gray-600">
+                No products found.
+              </div>
+            )}
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 };

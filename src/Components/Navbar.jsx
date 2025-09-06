@@ -26,7 +26,15 @@ const Navbar = () => {
     setIsDropdownOpen(false);
     navigate("/");
   };
-
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter") {
+         if (searchTerms !== "" && searchTerms !== undefined) {
+      navigate(`/s/${searchTerms}`);
+    }
+      e.target.red();
+      
+    }
+  };
   return (
     <div>
       <div className="fixed top-0 left-0 w-full bg-blue-500 shadow-md z-50">
@@ -48,6 +56,7 @@ const Navbar = () => {
               type="text"
               value={searchTerms}
               onChange={(e) => setSearchTerms(e.target.value)}
+              onKeyDown={handleKeyDown}
               placeholder="Search..."
               className="w-full border text-black bg-white font-bold border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
             />

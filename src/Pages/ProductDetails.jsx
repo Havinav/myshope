@@ -89,13 +89,25 @@ const ProductDetail = () => {
                 Brand: <span className="font-medium">{product.brand}</span>
               </p>
               <p className="text-gray-600">
-                Stock: <span className="font-medium">{product.stock}</span>
+                Stock: <span className="font-medium">{product.availabilityStatus}</span>
               </p>
+              <p className="text-sm text-gray-600">
+                        Discount:{" "}
+                        <span className="font-medium">
+                          {product.discountPercentage.toFixed(2)}%
+                        </span>
+                      </p>
+                       <p className="text-sm text-gray-600">
+                        ReturnPolicy:{" "}
+                        <span className="font-medium">
+                          {product.returnPolicy}
+                        </span>
+                      </p>
              
               {/* Add to Cart Button */}
               <div className="flex gap-4">
                 <button
-                  className="text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-6 py-3 transition-colors duration-200"
+                  className="text-white bg-yellow-600 hover:bg-yellow-900 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-6 py-3 transition-colors duration-200"
                   onClick={handleAddToCart}
                   aria-label={`Add ${product.title} to cart`}
                 >
