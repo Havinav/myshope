@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useDispatch } from "react-redux";
-import { loginUser, setUserLoggedIn } from "../slices/UserSlice";
+import { loginUser, setUserLoggedIn } from "../slices/userSlice";
 import { ToastContainer, toast } from "react-toastify";
 
 const Login = ({ loginData, setLoginFlag }) => {

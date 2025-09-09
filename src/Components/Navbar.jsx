@@ -4,7 +4,7 @@ import Login from "../Pages/Login";
 import { IoBag } from "react-icons/io5";
 import { FaRegUserCircle } from "react-icons/fa";
 import { useDispatch, useSelector } from "react-redux";
-import { logoutUser } from "../slices/UserSlice";
+import { logoutUser } from "../slices/userSlice";
 
 const Navbar = () => {
   const cartItems = useSelector((state) => state.cart.products);
