@@ -5,11 +5,11 @@ import Search from './Pages/Search';
 import Cart from './Pages/Cart';
 import Login from './Pages/Login';
 import Dashboard from './Components/Dashboard';
-import NotFound from './Components/Notfound';
 import ProductDetails from './Pages/ProductDetails';
 import Account from './Components/Account';
 import Orders from './Pages/OrderTracker';
 import CheckOut from './Pages/CheckOut';
+import NotFound from './Components/NotFound'
 
 const App = () => {
   const routes = createBrowserRouter([

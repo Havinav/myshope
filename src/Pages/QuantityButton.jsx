@@ -78,7 +78,7 @@ const QuantityButton = ({ initialValue = 1, min = 1, max = 6, productId, onQuant
         value={quantity}
         onChange={handleInputChange}
         onKeyDown={handleKeyDown}
-        className="w-16 h-10 text-center border text-black border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+        className="w-16 h-10 text-center border text-black border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500  [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
         aria-label={`Quantity for product ${productId}`}
       />
       <button
