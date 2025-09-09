@@ -1,10 +1,15 @@
 import axios from 'axios';
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import {useNavigate, useParams } from 'react-router-dom';
 import ProductCarousel from './ProductCarousel';
-import { FaStar } from 'react-icons/fa';
+import { FaArrowLeft, FaStar } from 'react-icons/fa';
+import { useDispatch } from 'react-redux';
+import { addToCart } from '../slices/cartSlice';
+import {  ToastContainer } from 'react-toastify';
 
 const ProductDetail = () => {
+   const navigate = useNavigate();
+  const disptch = useDispatch();
   const { id } = useParams();
   const numericId = parseInt(id); // Convert '79' to 79
   const [product, setProduct] = useState(null);
@@ -12,6 +17,7 @@ const ProductDetail = () => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    
     const fetchProduct = async () => {
       setLoading(true);
       setError(null);
@@ -29,16 +35,15 @@ const ProductDetail = () => {
     }
   }, [numericId]);
 
-  const handleAddToCart = () => {
-    console.log(`Added ${product?.title} to cart`);
-    // Replace with actual cart functionality (e.g., Redux, Context API, or API call)
+  const handleAddToCart = (product) => {
+    disptch(addToCart(product))
   };
 
   // Safely prepare image list
   const imageList = product && Array.isArray(product.images) ? product.images : [];
 
   return (
-    <div className="mt-22 md:mt-25 px-4 md:px-6 max-w-7xl mx-auto min-h-screen">
+    <div className="mt-35 md:mt-25 px-4 md:px-6 max-w-7xl mx-auto min-h-screen">
       {loading && (
         <div className="text-center text-gray-500 text-lg">Loading...</div>
       )}
@@ -46,7 +51,14 @@ const ProductDetail = () => {
         <div className="text-center text-red-500 text-lg">Error: {error}</div>
       )}
       {product && (
+        <div>
+          <button type="button" onClick={()=>navigate(`/s/${product.category}`)}
+          className="flex gap-2 text-white bg-gradient-to-r from-pink-400 via-pink-500 to-pink-600 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-pink-300 dark:focus:ring-pink-800 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 mb-2">
+            <FaArrowLeft className='mt-1'/> Back
+          </button>
+          
         <div className="flex flex-col bg-white border border-gray-200 rounded-lg shadow-md p-6">
+          
           {/* Product Card: Image and Details */}
           <div className="flex flex-col md:flex-row md:gap-8">
             {/* Image Carousel */}
@@ -108,7 +120,7 @@ const ProductDetail = () => {
               <div className="flex gap-4">
                 <button
                   className="text-white bg-yellow-600 hover:bg-yellow-900 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-6 py-3 transition-colors duration-200"
-                  onClick={handleAddToCart}
+                  onClick={()=>handleAddToCart(product)}
                   aria-label={`Add ${product.title} to cart`}
                 >
                   Add to Cart
@@ -145,14 +157,18 @@ const ProductDetail = () => {
                       {new Date(review.date).toLocaleDateString()}
                     </p>
                   </div>
+                 
                 ))
+                
               ) : (
                 <p className="text-gray-600 col-span-full">No reviews available.</p>
               )}
             </div>
           </div>
         </div>
+        </div>
       )}
+      <ToastContainer/>
     </div>
   );
 };

@@ -3,10 +3,14 @@ import { Link, useNavigate } from "react-router-dom";
 import Login from "../Pages/Login";
 import { IoBag } from "react-icons/io5";
 import { FaRegUserCircle } from "react-icons/fa";
+import { useDispatch, useSelector } from "react-redux";
+import { logoutUser } from "../slices/UserSlice";
 
 const Navbar = () => {
+  const cartItems = useSelector((state) => state.cart.products);
   const navigate = useNavigate();
-  const [userLogged] = useState(true);
+  const dispatch = useDispatch();
+  const isUserLoggedIn = useSelector((state) => state.user);
   const [loginFlag, setLoginFlag] = useState(false);
   const [searchTerms, setSearchTerms] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -24,6 +28,7 @@ const Navbar = () => {
   const handleLogout = () => {
     // Add logout logic here (e.g., clear auth token, update userLogged state)
     setIsDropdownOpen(false);
+    dispatch(logoutUser())
     navigate("/");
   };
   const handleKeyDown = (e) => {
@@ -74,17 +79,17 @@ const Navbar = () => {
             <Link to="/cart">
               <span className="flex font-bold text-white gap-1 items-center">
                 <IoBag className="text-lg" />
-                <p>Bag 0</p>
+                <p>Bag {cartItems.length}</p>
               </span>
             </Link>
-            {userLogged ? (
+            {isUserLoggedIn.isUserLoggedIn ? (
               <div className="relative">
                 <div
                   className="flex font-bold text-white gap-1 items-center cursor-pointer"
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                 >
                   <FaRegUserCircle className="text-lg" />
-                  Gopal
+                  {isUserLoggedIn.userData}
                 </div>
                 {isDropdownOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-2 z-50">
@@ -146,6 +151,7 @@ const Navbar = () => {
         {/* Login Popup */}
         {loginFlag && <Login loginData={loginFlag} setLoginFlag={setLoginFlag} />}
       </div>
+    
     </div>
   );
 };

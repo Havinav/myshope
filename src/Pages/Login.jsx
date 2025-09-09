@@ -1,31 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
+import { useDispatch } from "react-redux";
+import { loginUser, setUserLoggedIn } from "../slices/UserSlice";
+import { ToastContainer, toast } from "react-toastify";
 
 const Login = ({ loginData, setLoginFlag }) => {
-  const [isOpen, setIsOpen] = useState(loginData);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [errors, setErrors] = useState({ email: '', password: '' });
+  const dispatch = useDispatch();
 
+  const [isOpen, setIsOpen] = useState(loginData);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [errors, setErrors] = useState({ email: "", password: "" });
+  const [clientError, setClientError] = useState("");
   const validateForm = () => {
     let isValid = true;
-    const newErrors = { email: '', password: '' };
+    const newErrors = { email: "", password: "" };
 
     // Email validation: check for valid email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!email) {
-      newErrors.email = 'Email is required';
+      newErrors.email = "Email is required";
       isValid = false;
     } else if (!emailRegex.test(email)) {
-      newErrors.email = 'Please enter a valid email address';
+      newErrors.email = "Please enter a valid email address";
       isValid = false;
     }
 
     // Password validation: check for non-empty and minimum length
     if (!password) {
-      newErrors.password = 'Password is required';
-      isValid = false;
-    } else if (password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
+      newErrors.password = "Password is required";
       isValid = false;
     }
 
@@ -34,13 +36,27 @@ const Login = ({ loginData, setLoginFlag }) => {
   };
 
   const handleSubmit = (e) => {
+    setClientError("");
     e.preventDefault();
     if (validateForm()) {
-      // Proceed with form submission (e.g., API call)
-      console.log('Form submitted:', { email, password });
-      // Optionally close the popup
-      setIsOpen(false);
-      setLoginFlag(false);
+      if ("admin@gmail.com" === email && "admin" === password) {
+        dispatch(setUserLoggedIn(true));
+        dispatch(loginUser(email));
+
+        setIsOpen(!isOpen);
+        setLoginFlag(false);
+      } else {
+        toast.error("username and password is incorrect", {
+          position: "bottom-center",
+          autoClose: 4000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+          theme: "colored",
+        });
+      }
     }
   };
 
@@ -86,7 +102,14 @@ const Login = ({ loginData, setLoginFlag }) => {
                 alt="Logo"
               />
             </div>
-
+            {clientError && (
+              <div>
+                <span className="text-red-500 font-bold justify-center">
+                  {clientError}
+                </span>
+              </div>
+            )}
+            <br />
             {/* Login Form */}
             <div className="px-5 pb-5 md:px-6 md:pb-6">
               <form onSubmit={handleSubmit}>
@@ -104,10 +127,9 @@ const Login = ({ loginData, setLoginFlag }) => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className={`w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 ${
-                      errors.email ? 'border-red-500' : ''
+                      errors.email ? "border-red-500" : ""
                     }`}
                     aria-describedby="email-error"
-                    
                   />
                   {errors.email && (
                     <p id="email-error" className="text-red-500 text-xs mt-1">
@@ -129,13 +151,15 @@ const Login = ({ loginData, setLoginFlag }) => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className={`w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 ${
-                      errors.password ? 'border-red-500' : ''
+                      errors.password ? "border-red-500" : ""
                     }`}
                     aria-describedby="password-error"
-                    
                   />
                   {errors.password && (
-                    <p id="password-error" className="text-red-500 text-xs mt-1">
+                    <p
+                      id="password-error"
+                      className="text-red-500 text-xs mt-1"
+                    >
                       {errors.password}
                     </p>
                   )}
@@ -151,6 +175,7 @@ const Login = ({ loginData, setLoginFlag }) => {
           </div>
         </div>
       )}
+      <ToastContainer />
     </>
   );
 };

@@ -9,6 +9,7 @@ import NotFound from './Components/Notfound';
 import ProductDetails from './Pages/ProductDetails';
 import Account from './Components/Account';
 import Orders from './Pages/OrderTracker';
+import CheckOut from './Pages/CheckOut';
 
 const App = () => {
   const routes = createBrowserRouter([
@@ -48,6 +49,9 @@ const App = () => {
         {
           path:"/orders",
           element:<Orders/>
+        },
+        {
+         path:'/checkout', element:<CheckOut/>
         }
       ],
     },
