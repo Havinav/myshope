@@ -1,171 +1,208 @@
-import React from "react";
+// OrderTracker.jsx
+import React, { useEffect, useState } from "react";
+import { useSelector } from "react-redux";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "../firebase/firebase";
+import { toast } from "react-toastify";
+import { Link } from "react-router-dom";
 
 const OrderTracker = () => {
-  // Sample data with multiple orders
-  const ordersData = [
-    {
-      orderId: "1023498789",
-      items: [
-        {
-          id: 1,
-          name: "Wireless Headphones",
-          image: "https://via.placeholder.com/80",
-          quantity: 1,
-          price: 99.99,
-        },
-        {
-          id: 2,
-          name: "Smartphone Case",
-          image: "https://via.placeholder.com/80",
-          quantity: 2,
-          price: 19.99,
-        },
-      ],
-      trackingSteps: [
-        { step: 1, status: "Order Confirmed", date: "Feb 18, 2025", active: true },
-        { step: 2, status: "Shipped", date: "Feb 19, 2025", active: true },
-        { step: 3, status: "In Transit", date: "Feb 20, 2025", active: true },
-        { step: 4, status: "Out for Delivery", date: "Feb 21, 2025", active: false },
-        { step: 5, status: "Delivered", date: "Feb 22, 2025", active: false },
-      ],
-    },
-    {
-      orderId: "1023498790",
-      items: [
-        {
-          id: 3,
-          name: "USB-C Cable",
-          image: "https://via.placeholder.com/80",
-          quantity: 3,
-          price: 12.99,
-        },
-      ],
-      trackingSteps: [
-        { step: 1, status: "Order Confirmed", date: "Feb 17, 2025", active: true },
-        { step: 2, status: "Shipped", date: "Feb 18, 2025", active: true },
-        { step: 3, status: "In Transit", date: "Feb 19, 2025", active: false },
-        { step: 4, status: "Out for Delivery", date: "Feb 20, 2025", active: false },
-        { step: 5, status: "Delivered", date: "Feb 21, 2025", active: false },
-      ],
-    },
+  const user = useSelector((state) => state.user.userData);
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  // Define order statuses
+  const statusSteps = [
+    { id: "Ordered", label: "Order Placed" },
+    { id: "Processing", label: "Processing" },
+    { id: "Shipped", label: "Order Shipped" },
+    { id: "Delivered", label: "Order Delivered" },
   ];
 
-  return (
-    <div className=" min-h-screen p-4 sm:p-6 mt-30 md:mt-20">
-      <div className="max-w-7xl mx-auto">
-        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6">
-          Your Orders
-        </h2>
-        {ordersData.map((order, index) => (
-          <div
-            key={order.orderId}
-            className={`bg-white rounded-lg shadow-sm p-4 sm:p-6 mb-6 ${
-              index !== ordersData.length - 1 ? "border-b border-gray-200" : ""
+  // Fetch orders on mount
+  useEffect(() => {
+    if (user?.id) {
+      fetchOrders();
+    } else {
+      toast.error("Please log in to view your orders", {
+        position: "bottom-center",
+        autoClose: 4000,
+        theme: "dark",
+      });
+    }
+  }, [user?.id]);
+
+  const fetchOrders = async () => {
+    setLoading(true);
+    try {
+      const ordersRef = collection(db, "order", user.id, "orders");
+      const querySnapshot = await getDocs(ordersRef);
+      const ordersData = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      // Sort by orderDate (date and time) in descending order
+      const sortedOrders = ordersData.sort((a, b) => {
+        // Handle invalid or missing orderDate
+        const dateA = a.orderDate ? new Date(a.orderDate) : new Date(0); // Epoch for missing dates
+        const dateB = b.orderDate ? new Date(b.orderDate) : new Date(0);
+        // Extract date components (year, month, day)
+        const dateAYear = dateA.getFullYear();
+        const dateAMonth = dateA.getMonth();
+        const dateADay = dateA.getDate();
+        const dateBYear = dateB.getFullYear();
+        const dateBMonth = dateB.getMonth();
+        const dateBDay = dateB.getDate();
+        // Compare dates (year, month, day)
+        if (dateAYear !== dateBYear) return dateBYear - dateAYear;
+        if (dateAMonth !== dateBMonth) return dateBMonth - dateAMonth;
+        if (dateADay !== dateBDay) return dateBDay - dateADay;
+        // If dates are equal, compare times (full timestamp)
+        return dateB - dateA;
+      });
+      setOrders(sortedOrders);
+    } catch (error) {
+      console.error("Error fetching orders:", error);
+      toast.error("Failed to fetch orders", {
+        position: "bottom-center",
+        autoClose: 2000,
+        theme: "dark",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Render status tracker
+  const renderStatusTracker = (order) => {
+    const currentStatus = order.status;
+    const currentIndex = statusSteps.findIndex((step) => step.label === currentStatus);
+
+    return (
+      <ol className="flex md:flex-row flex-col md:items-start items-center justify-between w-full md:gap-1 gap-4">
+        {statusSteps.map((step, index) => (
+          <li
+            key={step.id}
+            className={`group flex relative justify-start ${
+              index < statusSteps.length - 1
+                ? `after:content-[''] lg:after:w-11 md:after:w-5 after:w-5 after:h-0.5 md:after:border after:border-dashed md:after:bg-gray-500 after:inline-block after:absolute md:after:top-7 after:top-3 xl:after:left-44 lg:after:left-40 md:after:left-36`
+                : ""
             }`}
           >
-            <h3 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-4">
-              Order #{order.orderId}
-            </h3>
-            <div className="flex flex-col lg:flex-row lg:space-x-6">
-              {/* Ordered Products List */}
-              <div className="w-full lg:w-2/3 mb-6 lg:mb-0">
-                <h4 className="text-lg font-semibold text-gray-900 mb-4">
-                  Ordered Items
-                </h4>
-                <div className="bg-gray-50 rounded-lg p-4">
-                  {order.items.map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-gray-200 py-4 last:border-b-0"
-                    >
-                      <div className="flex items-center space-x-4">
-                        <img
-                          src={item.image}
-                          alt={item.name}
-                          className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded"
-                        />
-                        <div>
-                          <h5 className="text-base sm:text-lg font-medium text-gray-900">
-                            {item.name}
-                          </h5>
-                          <p className="text-sm text-gray-500">
-                            Quantity: {item.quantity}
-                          </p>
-                        </div>
-                      </div>
-                      <p className="text-base sm:text-lg font-medium text-gray-900 mt-2 sm:mt-0">
-                        ${(item.price * item.quantity).toFixed(2)}
+            <div className="w-full mr-1 block z-10 flex flex-col items-center justify-start gap-1">
+              <div className="justify-center items-center gap-1.5 inline-flex">
+                <h5
+                  className={`text-center text-lg font-medium leading-normal font-manrope ${
+                    index <= currentIndex ? "text-gray-900" : "text-gray-500"
+                  } whitespace-nowrap`}
+                >
+                  {step.label}
+                </h5>
+                {index <= currentIndex && (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    className="inline-block"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      clipRule="evenodd"
+                      d="M1.83337 9.99992C1.83337 5.48959 5.48972 1.83325 10 1.83325C14.5104 1.83325 18.1667 5.48959 18.1667 9.99992C18.1667 14.5102 14.5104 18.1666 10 18.1666C5.48972 18.1666 1.83337 14.5102 1.83337 9.99992ZM14.3635 7.92721C14.6239 7.66687 14.6239 7.24476 14.3635 6.98441C14.1032 6.72406 13.6811 6.72406 13.4207 6.98441L9.82961 10.5755C9.53851 10.8666 9.3666 11.0365 9.22848 11.1419C9.17307 11.1842 9.13961 11.2029 9.1225 11.2107C9.1054 11.2029 9.07194 11.1842 9.01653 11.1419C8.87841 11.0365 8.7065 10.8666 8.4154 10.5755L7.13815 9.29825C6.8778 9.03791 6.45569 9.03791 6.19534 9.29825C5.93499 9.55861 5.93499 9.98071 6.19534 10.2411L7.50018 11.5459C7.75408 11.7999 7.98968 12.0355 8.20775 12.2019C8.44909 12.3861 8.74554 12.5469 9.1225 12.5469C9.49946 12.5469 9.79592 12.3861 10.0373 12.2019C10.2553 12.0355 10.4909 11.7999 10.7448 11.5459L14.3635 7.92721Z"
+                      fill="#047857"
+                    />
+                  </svg>
+                )}
+              </div>
+              <h6 className="text-center text-gray-500 text-base font-normal leading-relaxed font-manrope">
+                {order.statusTimestamps?.[step.label]
+                  ? new Date(order.statusTimestamps[step.label]).toLocaleString("en-US", {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
+                  : "Pending"}
+              </h6>
+            </div>
+          </li>
+        ))}
+      </ol>
+    );
+  };
+
+  return (
+    <div className="mt-29 md:mt-20">
+      <div className="p-4">
+        {loading && (
+          <div className="w-full bg-gray-200 rounded-full h-2.5 mb-6 overflow-hidden">
+            <div className="bg-blue-600 h-2.5 rounded-full animate-indeterminate"></div>
+          </div>
+        )}
+        <div>
+          {orders.length === 0 && !loading ? (
+            <p className="text-center text-gray-500 font-manrope">
+              No orders found.{" "}
+              <Link to="/s" className="text-blue-500 hover:underline">
+                Shop now
+              </Link>
+            </p>
+          ) : (
+            orders.map((order) => (
+              <div
+                key={order.id}
+                className="mb-8 p-8 border rounded-xl shadow-md bg-white text-black font-manrope"
+              >
+                <h2 className="text-2xl font-semibold text-gray-900 leading-9 pb-5 border-b border-gray-200">
+                  Order ID #{order.orderId}
+                </h2>
+                <div className="flex flex-col sm:flex-row gap-4 mb-6 items-start sm:items-center">
+                  <div>
+                    <img
+                      src={order.thumbnail}
+                      alt={order.title}
+                      className="w-24 h-24 sm:w-32 sm:h-32 object-contain rounded-md"
+                      onError={(e) => (e.target.src = "/fallback-image.png")}
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold text-gray-900">{order.title}</h3>
+                    <p className="text-gray-600 text-sm">Quantity: {order.quantity}</p>
+                    <p className="text-gray-600 text-sm">
+                      Price: ${order.price.toFixed(2)} x {order.quantity} = ${(order.price * order.quantity).toFixed(2)}
+                    </p>
+                    {order.discountPercentage && (
+                      <p className="text-sm text-green-600">
+                        Discount: {order.discountPercentage.toFixed(2)}%
                       </p>
-                    </div>
-                  ))}
-                  <div className="mt-4 pt-4 border-t border-gray-200">
-                    <div className="flex justify-between">
-                      <span className="text-base font-medium text-gray-900">
-                        Subtotal
-                      </span>
-                      <span className="text-base font-medium text-gray-900">
-                        ${order.items.reduce((total, item) => total + item.price * item.quantity, 0).toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between mt-2">
-                      <span className="text-base font-medium text-gray-900">
-                        Shipping
-                      </span>
-                      <span className="text-base font-medium text-gray-900">$5.00</span>
-                    </div>
-                    <div className="flex justify-between mt-2">
-                      <span className="text-lg font-bold text-gray-900">Total</span>
-                      <span className="text-lg font-bold text-gray-900">
-                        ${(order.items.reduce((total, item) => total + item.price * item.quantity, 0) + 5).toFixed(2)}
-                      </span>
-                    </div>
+                    )}
+                    <p className="text-gray-600 text-sm">
+                      Delivery by: {order.shippingInformation || "7-10 days"}
+                    </p>
+                  </div>
+                  <div className="flex justify-center items-center">
+                    <span className="font-bold text-gray-900">
+                      Total: ${(order.price * order.quantity).toFixed(2)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-900 font-medium">Delivery to:</span>
+                    <p className="text-gray-600 text-sm">
+                      {order.address.doorNo}, {order.address.street}, {order.address.city}, {order.address.district}, {order.address.state} - {order.address.pincode}
+                    </p>
                   </div>
                 </div>
-              </div>
-
-              {/* Delivery Tracker */}
-              <div className="w-full lg:w-1/3">
-                <h4 className="text-lg font-semibold text-gray-900 mb-4">
-                  Delivery Status
-                </h4>
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <ol className="relative">
-                    {order.trackingSteps.map((step, stepIndex) => (
-                      <li
-                        key={step.step}
-                        className={`flex items-start space-x-4 pb-6 last:pb-0 ${
-                          step.active ? "text-indigo-600" : "text-gray-500"
-                        } ${
-                          stepIndex !== order.trackingSteps.length - 1
-                            ? "after:content-[''] after:w-0.5 after:bg-gray-300 after:absolute after:top-10 after:left-3 after:h-[calc(100%-2.5rem)]"
-                            : ""
-                        }`}
-                      >
-                        <span
-                          className={`w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold mt-1 ${
-                            step.active
-                              ? "bg-indigo-600 text-white"
-                              : "border-2 border-indigo-600 bg-transparent"
-                          }`}
-                        >
-                          {step.step}
-                        </span>
-                        <div>
-                          <span className="text-sm font-medium block">
-                            {step.status}
-                          </span>
-                          <span className="text-sm font-normal text-gray-500">
-                            {step.date}
-                          </span>
-                        </div>
-                      </li>
-                    ))}
-                  </ol>
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-700 mb-2">Order Status</h4>
+                  {renderStatusTracker(order)}
                 </div>
               </div>
-            </div>
-          </div>
-        ))}
+            ))
+          )}
+        </div>
       </div>
     </div>
   );

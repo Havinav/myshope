@@ -14,3 +14,19 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+@keyframes indeterminate {
+  0% {
+    transform: translateX(-100%) scaleX(0.3);
+  }
+  50% {
+    transform: translateX(0%) scaleX(0.5);
+  }
+  100% {
+    transform: translateX(100%) scaleX(0.3);
+  }
+}
+
+.animate-indeterminate {
+  width: 100%;
+  animation: indeterminate 1.2s ease-in-out infinite;
+}

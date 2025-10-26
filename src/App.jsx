@@ -10,6 +10,9 @@ import Account from './Components/Account';
 import Orders from './Pages/OrderTracker';
 import CheckOut from './Pages/CheckOut';
 import NotFound from './Components/NotFound'
+import { ToastContainer } from 'react-toastify';
+import Register from './Pages/Register';
+import Address from './Pages/Address';
 
 const App = () => {
   const routes = createBrowserRouter([
@@ -39,12 +42,19 @@ const App = () => {
           element: <Login />,
         },
         {
+          path: '/register',
+          element: <Register />,
+        },
+        {
           path: '/product-details/:id',
           element:<ProductDetails />
         },
         {
           path:"/account",
           element:<Account/>
+        },
+        {
+         path:'/address', element:<Address/>
         },
         {
           path:"/orders",
@@ -57,7 +67,10 @@ const App = () => {
     },
   ]);
 
-  return <RouterProvider router={routes} />;
+  return <div>
+    <RouterProvider router={routes} />
+    <ToastContainer />
+  </div>;
 };
 
 export default App;

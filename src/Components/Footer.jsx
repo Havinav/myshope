@@ -1,5 +1,6 @@
-import React from 'react';
-import { FaTwitter, FaInstagram, FaFacebook } from 'react-icons/fa';
+import React from "react";
+import { FaTwitter, FaInstagram, FaFacebook, FaLinkedin } from "react-icons/fa";
+import { FaL } from "react-icons/fa6";
 
 const Footer = () => {
   return (
@@ -11,22 +12,34 @@ const Footer = () => {
             <h3 className="text-lg md:text-xl font-semibold mb-4">About Us</h3>
             <ul className="space-y-2 text-sm md:text-base">
               <li>
-                <a href="/about" className="hover:text-blue-400 transition-colors">
+                <a
+                  href="/about"
+                  className="hover:text-blue-400 transition-colors"
+                >
                   Our Story
                 </a>
               </li>
               <li>
-                <a href="/contact" className="hover:text-blue-400 transition-colors">
+                <a
+                  href="/contact"
+                  className="hover:text-blue-400 transition-colors"
+                >
                   Contact Us
                 </a>
               </li>
               <li>
-                <a href="/careers" className="hover:text-blue-400 transition-colors">
+                <a
+                  href="/careers"
+                  className="hover:text-blue-400 transition-colors"
+                >
                   Careers
                 </a>
               </li>
               <li>
-                <a href="/terms" className="hover:text-blue-400 transition-colors">
+                <a
+                  href="/terms"
+                  className="hover:text-blue-400 transition-colors"
+                >
                   Terms & Conditions
                 </a>
               </li>
@@ -35,25 +48,39 @@ const Footer = () => {
 
           {/* Customer Service */}
           <div>
-            <h3 className="text-lg md:text-xl font-semibold mb-4">Customer Service</h3>
+            <h3 className="text-lg md:text-xl font-semibold mb-4">
+              Customer Service
+            </h3>
             <ul className="space-y-2 text-sm md:text-base">
               <li>
-                <a href="/faq" className="hover:text-blue-400 transition-colors">
+                <a
+                  href="/faq"
+                  className="hover:text-blue-400 transition-colors"
+                >
                   FAQs
                 </a>
               </li>
               <li>
-                <a href="/returns" className="hover:text-blue-400 transition-colors">
+                <a
+                  href="/returns"
+                  className="hover:text-blue-400 transition-colors"
+                >
                   Returns & Refunds
                 </a>
               </li>
               <li>
-                <a href="/shipping" className="hover:text-blue-400 transition-colors">
+                <a
+                  href="/shipping"
+                  className="hover:text-blue-400 transition-colors"
+                >
                   Shipping Info
                 </a>
               </li>
               <li>
-                <a href="/support" className="hover:text-blue-400 transition-colors">
+                <a
+                  href="/support"
+                  className="hover:text-blue-400 transition-colors"
+                >
                   Support Center
                 </a>
               </li>
@@ -65,13 +92,10 @@ const Footer = () => {
             <h3 className="text-lg md:text-xl font-semibold mb-4">Follow Us</h3>
             <div className="flex space-x-4">
               <a
-                href="https://twitter.com"
+                href="https://www.linkedin.com/in/gopal-pandilla/"
                 target="_blank"
-                rel="noopener noreferrer"
-                className="text-white hover:text-blue-400 transition-colors"
-                aria-label="Follow us on Twitter"
               >
-                <FaTwitter className="w-6 h-6" />
+                <FaLinkedin className="w-6 h-6" />
               </a>
               <a
                 href="https://instagram.com"
@@ -92,18 +116,31 @@ const Footer = () => {
                 <FaFacebook className="w-6 h-6" />
               </a>
             </div>
+            <br />
+            <div className="text-sm md:text-base space-x-3">
+              Contact US
+              <p className="space-x-2">
+                <p className="text-sm md:text-base">Name: Gopal</p>
+                <p className="text-sm md:text-base">Phone: +91-9493384380</p>
+                <p className="text-sm md:text-base">
+                  Email: GOPAL.TECH22@GMAIL.COM
+                </p>
+              </p>
+            </div>
           </div>
 
           {/* Newsletter Signup */}
           <div>
-            <h3 className="text-lg md:text-xl font-semibold mb-4">Newsletter</h3>
+            <h3 className="text-lg md:text-xl font-semibold mb-4">
+              Newsletter
+            </h3>
             <p className="text-sm md:text-base mb-4">
               Subscribe for exclusive offers and updates.
             </p>
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                console.log('Newsletter submitted');
+                console.log("Newsletter submitted");
               }}
             >
               <div className="flex">

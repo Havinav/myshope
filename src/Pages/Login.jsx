@@ -1,7 +1,12 @@
+// src/Login.js
 import React, { useState } from "react";
 import { useDispatch } from "react-redux";
 import { loginUser, setUserLoggedIn } from "../slices/userSlice";
 import { ToastContainer, toast } from "react-toastify";
+import { Link } from "react-router-dom";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+import { auth, db } from "../firebase/firebase";
 
 const Login = ({ loginData, setLoginFlag }) => {
   const dispatch = useDispatch();
@@ -11,6 +16,8 @@ const Login = ({ loginData, setLoginFlag }) => {
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState({ email: "", password: "" });
   const [clientError, setClientError] = useState("");
+  const [loading, setLoading] = useState(false); // Loading state
+
   const validateForm = () => {
     let isValid = true;
     const newErrors = { email: "", password: "" };
@@ -25,7 +32,7 @@ const Login = ({ loginData, setLoginFlag }) => {
       isValid = false;
     }
 
-    // Password validation: check for non-empty and minimum length
+    // Password validation: check for non-empty
     if (!password) {
       newErrors.password = "Password is required";
       isValid = false;
@@ -35,31 +42,69 @@ const Login = ({ loginData, setLoginFlag }) => {
     return isValid;
   };
 
-  const handleSubmit = (e) => {
-    setClientError("");
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (validateForm()) {
-      if ("admin@gmail.com" === email && "admin" === password) {
-        dispatch(setUserLoggedIn(true));
-        dispatch(loginUser(email));
+    setClientError("");
+    setLoading(true); // Show loading
 
-        setIsOpen(!isOpen);
+    if (validateForm()) {
+      try {
+        // Sign in with Firebase Authentication
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+
+        // Optionally fetch additional user data from Firestore
+        const userDoc = await getDoc(doc(db, "users", user.uid));
+        let userData = { email: user.email };
+        if (userDoc.exists()) {
+          userData = { ...userData, ...userDoc.data(),  };
+          console.log("User data from Firestore:", userDoc.data());
+        }
+        userData.id = user.uid;
+        // Dispatch Redux actions
+        dispatch(setUserLoggedIn(true));
+        dispatch(loginUser(userData)); // Pass user data (email, username, etc.)
+
+        setIsOpen(false);
         setLoginFlag(false);
-      } else {
-        toast.error("username and password is incorrect", {
+        toast.success("Login successful!", {
           position: "bottom-center",
           autoClose: 4000,
           hideProgressBar: false,
           closeOnClick: true,
           pauseOnHover: true,
           draggable: true,
-          progress: undefined,
           theme: "colored",
         });
+      } catch (error) {
+        // Handle Firebase errors
+        let errorMessage = "Login failed. Please check your credentials.";
+        if (error.code === "auth/user-not-found" || error.code === "auth/wrong-password") {
+          errorMessage = "Incorrect email or password.";
+        } else if (error.code === "auth/too-many-requests") {
+          errorMessage = "Too many attempts. Please try again later.";
+        }
+
+        toast.error(errorMessage, {
+          position: "bottom-center",
+          autoClose: 4000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          theme: "colored",
+        });
+      } finally {
+        setLoading(false); // Hide loading
       }
+    } else {
+      setLoading(false); // Hide loading if validation fails
     }
   };
-
+  const closePopUp = () => {
+    setIsOpen(false);
+    setLoginFlag(false);
+  };
   const togglePopup = () => {
     setIsOpen(!isOpen);
     setLoginFlag(false);
@@ -81,7 +126,7 @@ const Login = ({ loginData, setLoginFlag }) => {
                   className="w-5 h-5"
                   fill="none"
                   stroke="currentColor"
-                  viewBox="0 24 24"
+                  viewBox="0 0 24 24"
                   xmlns="http://www.w3.org/2000/svg"
                 >
                   <path
@@ -103,14 +148,10 @@ const Login = ({ loginData, setLoginFlag }) => {
               />
             </div>
             {clientError && (
-              <div>
-                <span className="text-red-500 font-bold justify-center">
-                  {clientError}
-                </span>
+              <div className="text-center">
+                <span className="text-red-500 font-bold">{clientError}</span>
               </div>
             )}
-            <br />
-            {/* Login Form */}
             <div className="px-5 pb-5 md:px-6 md:pb-6">
               <form onSubmit={handleSubmit}>
                 <div className="mb-3">
@@ -156,21 +197,32 @@ const Login = ({ loginData, setLoginFlag }) => {
                     aria-describedby="password-error"
                   />
                   {errors.password && (
-                    <p
-                      id="password-error"
-                      className="text-red-500 text-xs mt-1"
-                    >
+                    <p id="password-error" className="text-red-500 text-xs mt-1">
                       {errors.password}
                     </p>
                   )}
                 </div>
                 <button
                   type="submit"
-                  className="w-full bg-blue-600 text-white font-medium rounded-md py-1.5 md:py-2 text-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  className={`w-full bg-blue-600 text-white font-medium rounded-md py-1.5 md:py-2 text-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 ${
+                    loading ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
+                  disabled={loading}
                 >
-                  Sign In
+                  {loading ? "Signing In..." : "Sign In"}
                 </button>
               </form>
+              <div>
+                <p className="text-xs text-gray-500 mt-3">
+                  You don't have an account?{" "}
+                  <Link onClick={()=>closePopUp()}
+                    className="text-blue-600 hover:underline cursor-pointer"
+                    to="/register"
+                  >
+                    Sign Up
+                  </Link>
+                </p>
+              </div>
             </div>
           </div>
         </div>

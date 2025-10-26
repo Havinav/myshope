@@ -2,9 +2,10 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Login from "../Pages/Login";
 import { IoBag } from "react-icons/io5";
-import { FaRegUserCircle } from "react-icons/fa";
+import { FaChevronDown, FaFirstOrder, FaRegAddressCard, FaRegUser, FaRegUserCircle } from "react-icons/fa";
 import { useDispatch, useSelector } from "react-redux";
 import { logoutUser } from "../slices/userSlice";
+import { RiLogoutCircleLine } from "react-icons/ri";
 
 const Navbar = () => {
   const cartItems = useSelector((state) => state.cart.products);
@@ -89,29 +90,36 @@ const Navbar = () => {
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                 >
                   <FaRegUserCircle className="text-lg" />
-                  {isUserLoggedIn.userData}
+                  {isUserLoggedIn.userData.username} <FaChevronDown className="mt-1" />
                 </div>
                 {isDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-2 z-50">
+                  <div className="absolute right-0 mt-2 w-35   bg-white rounded-md shadow-lg py-2 z-50">
                     <Link
                       to="/orders"
-                      className="block font-bold px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700"
+                      className="flex gap-2 font-bold px-4 py-2 text-sm text-gray-700 hover:bg-blue-100 hover:text-blue-700"
                       onClick={() => setIsDropdownOpen(false)}
                     >
-                      Orders
+                     <FaFirstOrder className="mt-1" /> Orders
                     </Link>
                     <Link
                       to="/account"
-                      className="block font-bold px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700"
+                      className=" flex  gap-2 font-bold px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700"
                       onClick={() => setIsDropdownOpen(false)}
                     >
-                      User Profile
+                     <FaRegUser className="mt-1"/> Profile
+                    </Link>
+                        <Link
+                      to="/address"
+                      className="flex gap-2 font-bold px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700"
+                      onClick={() => setIsDropdownOpen(false)}
+                    >
+                   <FaRegAddressCard className="mt-1" />  Address
                     </Link>
                     <button
                       onClick={handleLogout}
-                      className="block font-bold w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700"
+                      className="flex gap-2 font-bold w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700"
                     >
-                      Logout
+                      <RiLogoutCircleLine className="mt-1" />Logout
                     </button>
                   </div>
                 )}

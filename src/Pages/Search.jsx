@@ -1,24 +1,30 @@
+// Search.jsx
 import axios from "axios";
 import React, { useState, useEffect, useCallback } from "react";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
-import { addToCart } from "../slices/cartSlice";
+import { addToCartAsync } from "../slices/cartSlice";
+import { toast } from "react-toastify";
 
 const Search = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { category } = useParams();
-  const decodedCategory = category ? decodeURIComponent(category).trim().toLowerCase() : "";
+  const decodedCategory = category
+    ? decodeURIComponent(category).trim().toLowerCase()
+    : "";
+  const user = useSelector((state) => state.user.userData);
 
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [maxPrice, setMaxPrice] = useState(1000); // Single state for max price
+  const [maxPrice, setMaxPrice] = useState(1000);
   const [minRating, setMinRating] = useState(0);
   const [sortOption, setSortOption] = useState("default");
   const [brands, setBrands] = useState([]);
   const [brandSelected, setBrandSelected] = useState("");
+  const [loadingStates, setLoadingStates] = useState({}); // Track loading per product
 
   const fetchProducts = useCallback(async () => {
     if (!decodedCategory) {
@@ -45,11 +51,16 @@ const Search = () => {
             const apiCategory = categoryMap[cat.toLowerCase()] || cat;
             try {
               const resp = await axios.get(
-                `https://dummyjson.com/products/category/${encodeURIComponent(apiCategory)}`
+                `https://dummyjson.com/products/category/${encodeURIComponent(
+                  apiCategory
+                )}`
               );
               return resp.data.products || [];
             } catch (err) {
-              console.error(`Failed to fetch category ${apiCategory}:`, err.message);
+              console.error(
+                `Failed to fetch category ${apiCategory}:`,
+                err.message
+              );
               return [];
             }
           })
@@ -62,19 +73,24 @@ const Search = () => {
         const query = categoryMap[searchTerm] || searchTerm;
         try {
           const resp = await axios.get(
-            `https://dummyjson.com/products/search?q=${encodeURIComponent(query)}`
+            `https://dummyjson.com/products/search?q=${encodeURIComponent(
+              query
+            )}`
           );
           allProducts = resp.data.products || [];
         } catch (err) {
-          console.error(`Failed to fetch search results for ${query}:`, err.message);
+          console.error(
+            `Failed to fetch search results for ${query}:`,
+            err.message
+          );
           setError("No products found for this category or search term.");
         }
       }
 
-      // Set max price dynamically based on fetched products
-      const maxProductPrice = allProducts.length > 0
-        ? Math.ceil(Math.max(...allProducts.map((p) => p.price)))
-        : 1000;
+      const maxProductPrice =
+        allProducts.length > 0
+          ? Math.ceil(Math.max(...allProducts.map((p) => p.price)))
+          : 1000;
       setMaxPrice(maxProductPrice);
 
       setProducts(allProducts);
@@ -102,28 +118,24 @@ const Search = () => {
   useEffect(() => {
     let updatedProducts = [...products];
 
-    // Filter by price (min is always 0, max is maxPrice)
     updatedProducts = updatedProducts.filter(
       (product) => product.price <= maxPrice
     );
 
-    // Filter by rating
     updatedProducts = updatedProducts.filter(
       (product) => product.rating >= minRating
     );
 
-    // Filter by brand
     if (brandSelected) {
       updatedProducts = updatedProducts.filter(
         (product) => product.brand === brandSelected
       );
     }
 
-    // Sort products
     if (sortOption === "price-low-high") {
       updatedProducts.sort((a, b) => a.price - b.price);
     } else if (sortOption === "price-high-low") {
-      updatedProducts.sort((a, b) => b.price - a.price);
+      updatedProducts.sort((a, b) => b.price - b.price);
     }
 
     setFilteredProducts(updatedProducts);
@@ -147,14 +159,37 @@ const Search = () => {
   };
 
   const resetFilters = () => {
-    setMaxPrice(products.length > 0 ? Math.ceil(Math.max(...products.map((p) => p.price))) : 1000);
+    setMaxPrice(
+      products.length > 0
+        ? Math.ceil(Math.max(...products.map((p) => p.price)))
+        : 1000
+    );
     setMinRating(0);
     setSortOption("default");
     setBrandSelected("");
   };
 
+  // Add product to cart in Firestore
+  const addToProductCart = async (product) => {
+    if (!user?.id) {
+      toast.error("Please log in to add products to cart", {
+        position: "bottom-center",
+        autoClose: 2000,
+        theme: "dark",
+      });
+      return;
+    }
+
+    setLoadingStates((prev) => ({ ...prev, [product.id]: true }));
+    try {
+      await dispatch(addToCartAsync({ product, userId: user?.id })).unwrap();
+    } finally {
+      setLoadingStates((prev) => ({ ...prev, [product.id]: false }));
+    }
+  };
+
   return (
-    <div className="mt-32 md:mt-28 px-4 md:px-6 max-w-7xl mx-auto text-black">
+    <div className="mt-32 md:mt-28 px-4 md:px-6 max-w-7xl mx-auto text-black font-manrope">
       {loading && (
         <div className="text-center text-gray-600 py-4">
           <div className="animate-spin inline-block w-6 h-6 border-4 border-blue-500 border-t-transparent rounded-full"></div>
@@ -182,7 +217,9 @@ const Search = () => {
 
           {/* Price Filter (Single Slider) */}
           <div className="mb-6">
-            <h3 className="text-md font-semibold text-gray-700 mb-2">Max Price</h3>
+            <h3 className="text-md font-semibold text-gray-700 mb-2">
+              Max Price
+            </h3>
             <div className="relative">
               <input
                 type="range"
@@ -190,15 +227,24 @@ const Search = () => {
                 value={maxPrice}
                 onChange={handlePriceChange}
                 min="0"
-                max={products.length > 0 ? Math.ceil(Math.max(...products.map((p) => p.price))) : 1000}
+                max={
+                  products.length > 0
+                    ? Math.ceil(Math.max(...products.map((p) => p.price)))
+                    : 1000
+                }
                 step="10"
                 className="w-full h-2 bg-gray-200 rounded-lg cursor-pointer"
               />
-              {/* Tooltip for Max Price */}
               <div
                 className="absolute text-sm bg-gray-800 text-white px-2 py-1 rounded"
                 style={{
-                  left: `${(maxPrice / (products.length > 0 ? Math.ceil(Math.max(...products.map((p) => p.price))) : 1000)) * 100}%`,
+                  left: `${
+                    (maxPrice /
+                      (products.length > 0
+                        ? Math.ceil(Math.max(...products.map((p) => p.price)))
+                        : 1000)) *
+                    100
+                  }%`,
                   transform: "translateX(-50%)",
                   top: "-2.5rem",
                 }}
@@ -207,7 +253,12 @@ const Search = () => {
               </div>
               <div className="flex justify-between text-sm text-gray-500 mt-6">
                 <span>$0</span>
-                <span>${products.length > 0 ? Math.ceil(Math.max(...products.map((p) => p.price))) : 1000}</span>
+                <span>
+                  $
+                  {products.length > 0
+                    ? Math.ceil(Math.max(...products.map((p) => p.price)))
+                    : 1000}
+                </span>
               </div>
             </div>
           </div>
@@ -231,7 +282,9 @@ const Search = () => {
           {/* Brand Filter */}
           {brands.length > 0 && (
             <div className="mb-6">
-              <h3 className="text-md font-semibold text-gray-700 mb-2">Brand</h3>
+              <h3 className="text-md font-semibold text-gray-700 mb-2">
+                Brand
+              </h3>
               <select
                 value={brandSelected}
                 onChange={handleBrandChange}
@@ -255,7 +308,9 @@ const Search = () => {
               {decodedCategory || "Products"}
             </h2>
             <div className="flex items-center gap-4 mt-4 sm:mt-0">
-              <label className="text-sm font-semibold text-gray-700">Sort By:</label>
+              <label className="text-sm font-semibold text-gray-700">
+                Sort By:
+              </label>
               <select
                 value={sortOption}
                 onChange={handleSortChange}
@@ -290,30 +345,52 @@ const Search = () => {
                         {product.title}
                       </h3>
                       <p className="text-sm">
-                        Rating: <span className="font-medium">{product.rating.toFixed(1)} / 5</span>
+                        Rating:{" "}
+                        <span className="font-medium">
+                          {product.rating.toFixed(1)} / 5
+                        </span>
                       </p>
                       <p className="text-sm">
-                        Discount: <span className="font-medium">{product.discountPercentage.toFixed(2)}%</span>
+                        Discount:{" "}
+                        <span className="font-medium">
+                          {product.discountPercentage.toFixed(2)}%
+                        </span>
                       </p>
                       <p className="text-sm">
-                        Stock: <span className="font-medium">{product.stock ? "In Stock" : "Out of Stock"}</span>
+                        Stock:{" "}
+                        <span className="font-medium">
+                          {product.stock ? "In Stock" : "Out of Stock"}
+                        </span>
                       </p>
                       <p className="text-sm">
-                        Brand: <span className="font-medium">{product.brand || "N/A"}</span>
+                        Brand:{" "}
+                        <span className="font-medium">
+                          {product.brand || "N/A"}
+                        </span>
                       </p>
                     </div>
                     <div className="flex flex-col items-end gap-2">
-                      <p className="text-lg font-bold">${product.price.toFixed(2)}</p>
+                      <p className="text-lg font-bold">
+                        ${product.price.toFixed(2)}
+                      </p>
                       <div className="flex gap-2">
                         <button
-                          onClick={() => dispatch(addToCart(product))}
+                          onClick={() => addToProductCart(product)}
                           className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-yellow-400 to-yellow-600 rounded-md hover:from-yellow-500 hover:to-yellow-700 transition-all duration-300 shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
-                          disabled={!product.stock}
+                          disabled={!product.stock || loadingStates[product.id]}
                         >
-                          Add to Cart
+                          {loadingStates[product.id] ? (
+                            <div className="flex items-center justify-center">
+                              <div className="animate-spin inline-block w-5 h-5 border-4 border-white border-t-transparent rounded-full"></div>
+                            </div>
+                          ) : (
+                            "Add to Cart"
+                          )}
                         </button>
                         <button
-                          onClick={() => navigate(`/product-details/${product.id}`)}
+                          onClick={() =>
+                            navigate(`/product-details/${product.id}`)
+                          }
                           className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-orange-400 to-orange-600 rounded-md hover:from-orange-500 hover:to-orange-700 transition-all duration-300 shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-orange-500"
                         >
                           View

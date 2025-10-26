@@ -1,33 +1,36 @@
+// src/slices/userSlice.js
 import { createSlice } from "@reduxjs/toolkit";
 
-// Define the initial state
 const initialState = {
-  isUserLoggedIn: false,
-  userData: null,
+  isUserLoggedIn: sessionStorage.getItem("userData") ? true : false,
+  userData: sessionStorage.getItem("userData")
+    ? JSON.parse(sessionStorage.getItem("userData"))
+    : null,
 };
 
-// Create the slice
 const userSlice = createSlice({
   name: "user",
   initialState,
   reducers: {
-    // Rename reducer to describe action (setUserLoggedIn)
     setUserLoggedIn: (state, action) => {
-      state.isUserLoggedIn = action.payload; // Expect boolean payload
+      state.isUserLoggedIn = action.payload;
     },
-  
     loginUser: (state, action) => {
       state.isUserLoggedIn = true;
       state.userData = action.payload;
+      sessionStorage.setItem("userData", JSON.stringify(action.payload));
     },
     logoutUser: (state) => {
       state.isUserLoggedIn = false;
       state.userData = null;
+      sessionStorage.removeItem("userData"); // Clear sessionStorage on logout
+    },
+    restoreUser: (state, action) => {
+      state.isUserLoggedIn = true;
+      state.userData = action.payload;
     },
   },
 });
 
-
-export const { setUserLoggedIn, loginUser, logoutUser } = userSlice.actions;
-
+export const { setUserLoggedIn, loginUser, logoutUser, restoreUser } = userSlice.actions;
 export default userSlice.reducer;

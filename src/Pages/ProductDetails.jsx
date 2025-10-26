@@ -4,12 +4,12 @@ import {useNavigate, useParams } from 'react-router-dom';
 import ProductCarousel from './ProductCarousel';
 import { FaArrowLeft, FaStar } from 'react-icons/fa';
 import { useDispatch } from 'react-redux';
-import { addToCart } from '../slices/cartSlice';
-import {  ToastContainer } from 'react-toastify';
+import { addToCartAsync } from '../slices/cartSlice';
+import {  toast, ToastContainer } from 'react-toastify';
 
 const ProductDetail = () => {
    const navigate = useNavigate();
-  const disptch = useDispatch();
+  
   const { id } = useParams();
   const numericId = parseInt(id); // Convert '79' to 79
   const [product, setProduct] = useState(null);
@@ -34,9 +34,20 @@ const ProductDetail = () => {
       fetchProduct();
     }
   }, [numericId]);
-
+  const dispatch = useDispatch();
   const handleAddToCart = (product) => {
-    disptch(addToCart(product))
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (!user?.id) {
+        toast.error("Please log in to add products to cart", {
+          position: "bottom-center",  
+          autoClose: 2000,
+          theme: "dark",
+        });
+      return;
+    }else{
+        dispatch(addToCartAsync({ product, userId: user?.id }));
+    }
+   
   };
 
   // Safely prepare image list
