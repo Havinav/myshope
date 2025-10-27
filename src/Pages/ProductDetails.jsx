@@ -63,13 +63,13 @@ const ProductDetail = () => {
       )}
       {product && (
         <div>
-          <button type="button" onClick={()=>navigate(`/s/${product.category}`)}
-          className="flex gap-2 text-white bg-gradient-to-r from-pink-400 via-pink-500 to-pink-600 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-pink-300 dark:focus:ring-pink-800 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 mb-2">
-            <FaArrowLeft className='mt-1'/> Back
-          </button>
+          
           
         <div className="flex flex-col bg-white border border-gray-200 rounded-lg shadow-md p-6">
-          
+          <button type="button" onClick={()=>navigate(`/s/${product.category}`)}
+          className="flex w-40 justify-items-center gap-2 text-white bg-gradient-to-r from-pink-400 via-pink-500 to-pink-600 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-pink-300 dark:focus:ring-pink-800 font-medium rounded-lg text-sm px-5 py-2.5 text-center me-2 mb-2">
+            <FaArrowLeft className='mt-1'/> Back
+          </button>
           {/* Product Card: Image and Details */}
           <div className="flex flex-col md:flex-row md:gap-8">
             {/* Image Carousel */}

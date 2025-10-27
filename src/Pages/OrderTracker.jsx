@@ -13,10 +13,10 @@ const OrderTracker = () => {
 
   // Define order statuses
   const statusSteps = [
-    { id: "Ordered", label: "Order Placed" },
-    { id: "Processing", label: "Processing" },
-    { id: "Shipped", label: "Order Shipped" },
-    { id: "Delivered", label: "Order Delivered" },
+    { id: "Ordered", label: "Order Placed", icon: "🛒" },
+    { id: "Processing", label: "Order Processing", icon: "⚙️" },
+    { id: "Shipped", label: "Order Shipped", icon: "🚚" },
+    { id: "Delivered", label: "Order Delivered", icon: "📦" },
   ];
 
   // Fetch orders on mount
@@ -96,7 +96,7 @@ const OrderTracker = () => {
                     index <= currentIndex ? "text-gray-900" : "text-gray-500"
                   } whitespace-nowrap`}
                 >
-                  {step.label}
+                  {step.label} {step.icon}
                 </h5>
                 {index <= currentIndex && (
                   <svg
@@ -125,7 +125,7 @@ const OrderTracker = () => {
                       hour: "2-digit",
                       minute: "2-digit",
                     })
-                  : "Pending"}
+                  : "--"}
               </h6>
             </div>
           </li>
@@ -182,6 +182,11 @@ const OrderTracker = () => {
                     <p className="text-gray-600 text-sm">
                       Delivery by: {order.shippingInformation || "7-10 days"}
                     </p>
+                  </div>
+                  <div className="flex justify-center items-center">
+                    <span className="font-bold text-gray-500">
+                      Payment Method: <span className="font-bold text-red-500">{String(order.paymentMode).toUpperCase()}</span>
+                    </span>
                   </div>
                   <div className="flex justify-center items-center">
                     <span className="font-bold text-gray-900">

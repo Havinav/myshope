@@ -9,7 +9,7 @@ import { toast } from "react-toastify";
 import { Link } from "react-router-dom";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase/firebase";
-
+import Address from "./Address";
 
 const Cart = () => {
   const dispatch = useDispatch();
@@ -20,7 +20,7 @@ const Cart = () => {
   const { products: cartItems, loading, error } = useSelector(
     (state) => state.cart
   );
-   
+
   // Fetch cart items and address on component mount
   useEffect(() => {
     if (user?.id) {
@@ -59,8 +59,6 @@ const Cart = () => {
     }
   };
 
-
-
   // Handle product deletion
   const handleRemoveProduct = (productId) => {
     dispatch(removeProductAsync({ productId: Number(productId), userId: user.id }));
@@ -75,9 +73,8 @@ const Cart = () => {
   const tax = subtotal * 0.1;
   const total = subtotal + shipping + tax;
 
-
   return (
-    <div className="min-h-screen  py-8 px-4 sm:px-6 lg:px-8 mt-25 md:mt-18">
+    <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8 mt-25 md:mt-18 font-manrope">
       <div className="max-w-7xl mx-auto">
         {(loading || addressLoading) && (
           <div className="w-full bg-gray-200 rounded-full h-2.5 mb-6 overflow-hidden">
@@ -149,7 +146,6 @@ const Cart = () => {
                               <p className="font-semibold text-black">
                                 ${item.price.toFixed(2)} | Discount: {item.discountPercentage?.toFixed(2) || 0}%
                               </p>
-                              
                               <button
                                 className="mt-2 text-red-500 hover:bg-red-100 hover:text-red-600 p-1 rounded-md"
                                 onClick={() => handleRemoveProduct(item.id)}
@@ -195,13 +191,13 @@ const Cart = () => {
                     </div>
                   </div>
                 </div>
-                <Link to={'/checkout'}>
-                <button 
-                  className="w-full mt-6 bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled={cartItems.length === 0 || loading || addressLoading}
-                >
-                  Proceed to Checkout
-                </button>
+                <Link to="/checkout">
+                  <button
+                    className="w-full mt-6 bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={cartItems.length === 0 || loading || addressLoading}
+                  >
+                    Proceed to Checkout
+                  </button>
                 </Link>
               </div>
             </div>
@@ -210,36 +206,12 @@ const Cart = () => {
 
         {/* Address Modal */}
         {addressFlag && (
-          <div className="fixed  inset-0 bg-opacity-100 flex items-center justify-center z-50">
-            <div className="bg-gray-500 text-white p-6 rounded-lg shadow-lg w-11/12 max-w-lg transform transition-all duration-300">
-              <h2 className="text-xl font-semibold mb-4 ">
-                Address
-              </h2>
-               <span className="text-sm ">
-                Please provide your address details for delivery.
-              </span>
-              <form>
-
-                </form>
-                <div className="mt-4   pt-4 flex justify-end gap-4">
-                  <Link to={'/address'}>
-                <button
-                  className="mt-4 bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  onClick={() => setAddressFlag(false)} 
-                  disabled={loading || addressLoading}
-                >
-                  Add / Edit Address
-                </button>
-                </Link>
-                
-              <button
-                className="mt-4  bg-red-500 text-white py-2 px-4 rounded-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500"
-                onClick={() => setAddressFlag(false)}
-                disabled={loading || addressLoading}
-              >
-                Close
-              </button>
-                  </div>
+          <div className="fixed inset-0 text-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-lg shadow-lg w-11/12 max-w-lg transform transition-all duration-300">
+              <Address
+                onClose={() => setAddressFlag(false)}
+                onSave={fetchAddress}
+              />
             </div>
           </div>
         )}
