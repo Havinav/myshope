@@ -1,152 +1,151 @@
+// OrderUpdate.js
 import {
   updateDoc,
   query,
   getDocs,
   collectionGroup,
+  doc,
+  serverTimestamp,        // optional – for updateDate
 } from "firebase/firestore";
 import { db } from "../firebase/firebase";
 
+/* -------------------------------------------------------------
+   Helper: true if at least `hours` have passed since `timestamp`
+   ------------------------------------------------------------- */
+const hasTimeElapsed = (timestamp, hours) => {
+  if (!timestamp) return false;
+  const diffMs = Date.now() - new Date(timestamp).getTime();
+  return diffMs >= hours * 60 * 60 * 1000;
+};
+
+/* -------------------------------------------------------------
+   Core update functions
+   ------------------------------------------------------------- */
 const OrderUpdate = {
+  /** Order Placed → Order Processing (after 3 h) */
   updateToProcessing: async () => {
+    const promises = [];
     try {
-      const ordersQuery = query(collectionGroup(db, "orders"));
-      const querySnapshot = await getDocs(ordersQuery);
+      // 1. collectionGroup only needs the sub-collection name
+      const q = query(collectionGroup(db, "orders"));
+      const snap = await getDocs(q);
 
-      const updatePromises = [];
-      querySnapshot.forEach(async (doc) => {
-        if (doc.exists()) {
-          const orderData = doc.data();
-          const userId = doc.ref.path.split("/")[1]; // Extract userId from path (e.g., order/{userId}/orders/{orderId})
-          const orderId = doc.id;
+      snap.forEach((d) => {
+        if (!d.exists()) return;
+        const data = d.data();
+        const ts = data.statusTimestamps || {};
 
-          // Ensure orderData has userId and id for consistency
-          const updatedOrderData = { ...orderData, userId, id: orderId };
+        if (
+          data.status === "Order Placed" &&
+          hasTimeElapsed(ts["Order Placed"], 3)   // ← 3-hour check
+        ) {
+          // 2. Correct path: orders/{userId}/orders/{orderId}
+          const [, userId] = d.ref.path.split("/"); // index 0 = "orders", 1 = userId
+          const orderRef = doc(db, "orders", userId, "orders", String(data.orderId));
 
-          if (orderData.status === "Order Placed") {
-            const orderRef = doc(
-              db,
-              "order",
-              updatedOrderData.userId,
-              "orders",
-              String(orderData.orderId)
-            );
-
-            await updateDoc(orderRef, {
+          promises.push(
+            updateDoc(orderRef, {
               status: "Order Processing",
-              updateDate: new Date().toISOString(),
+              updateDate: serverTimestamp(),               // or new Date().toISOString()
               statusTimestamps: {
-                ...(orderData.statusTimestamps || {}),
+                ...ts,
                 "Order Processing": new Date().toISOString(),
               },
-            });
-          }
+            }).catch((e) =>
+              console.error(`Failed Processing ${data.orderId}:`, e)
+            )
+          );
         }
       });
 
-      // Wait for all updates to complete
-      await Promise.all(updatePromises);
-    } catch (error) {
-      console.error(
-        `Error updating order to Processing:`,
-        error.message
-      );
-    
+      await Promise.all(promises);
+      console.log(`updateToProcessing: ${promises.length} orders updated`);
+    } catch (e) {
+      console.error("updateToProcessing error:", e);
     }
   },
 
+  /** Order Processing → Order Shipped (after 5 h) */
   updateToShipped: async () => {
-     try {
-      const ordersQuery = query(collectionGroup(db, "orders"));
-      const querySnapshot = await getDocs(ordersQuery);
+    const promises = [];
+    try {
+      const q = query(collectionGroup(db, "orders"));
+      const snap = await getDocs(q);
 
-      const updatePromises = [];
-      querySnapshot.forEach(async (doc) => {
-        if (doc.exists()) {
-          const orderData = doc.data();
-          const userId = doc.ref.path.split("/")[1]; // Extract userId from path (e.g., order/{userId}/orders/{orderId})
-          const orderId = doc.id;
+      snap.forEach((d) => {
+        if (!d.exists()) return;
+        const data = d.data();
+        const ts = data.statusTimestamps || {};
 
-          // Ensure orderData has userId and id for consistency
-          const updatedOrderData = { ...orderData, userId, id: orderId };
+        if (
+          data.status === "Order Processing" &&
+          hasTimeElapsed(ts["Order Processing"], 5)
+        ) {
+          const [, userId] = d.ref.path.split("/");
+          const orderRef = doc(db, "orders", userId, "orders", String(data.orderId));
 
-          if (orderData.status === "Order Processing") {
-            const orderRef = doc(
-              db,
-              "order",
-              updatedOrderData.userId,
-              "orders",
-              String(orderData.orderId)
-            );
-
-            await updateDoc(orderRef, {
+          promises.push(
+            updateDoc(orderRef, {
               status: "Order Shipped",
-              updateDate: new Date().toISOString(),
+              updateDate: serverTimestamp(),
               statusTimestamps: {
-                ...(orderData.statusTimestamps || {}),
+                ...ts,
                 "Order Shipped": new Date().toISOString(),
               },
-            });
-          }
+            }).catch((e) =>
+              console.error(`Failed Shipped ${data.orderId}:`, e)
+            )
+          );
         }
       });
 
-      // Wait for all updates to complete
-      await Promise.all(updatePromises);
-    } catch (error) {
-      console.error(
-        `Error updating order to Processing:`,
-        error.message
-      );
-    
+      await Promise.all(promises);
+      console.log(`updateToShipped: ${promises.length} orders updated`);
+    } catch (e) {
+      console.error("updateToShipped error:", e);
     }
   },
 
+  /** Order Shipped → Order Delivered (after 7 h) */
   updateToDelivered: async () => {
-     try {
-      const ordersQuery = query(collectionGroup(db, "orders"));
-      const querySnapshot = await getDocs(ordersQuery);
+    const promises = [];
+    try {
+      const q = query(collectionGroup(db, "orders"));
+      const snap = await getDocs(q);
 
-      const updatePromises = [];
-      querySnapshot.forEach(async (doc) => {
-        if (doc.exists()) {
-          const orderData = doc.data();
-          const userId = doc.ref.path.split("/")[1]; // Extract userId from path (e.g., order/{userId}/orders/{orderId})
-          const orderId = doc.id;
+      snap.forEach((d) => {
+        if (!d.exists()) return;
+        const data = d.data();
+        const ts = data.statusTimestamps || {};
 
-          // Ensure orderData has userId and id for consistency
-          const updatedOrderData = { ...orderData, userId, id: orderId };
+        if (
+          data.status === "Order Shipped" &&
+          hasTimeElapsed(ts["Order Shipped"], 7)
+        ) {
+          const [, userId] = d.ref.path.split("/");
+          const orderRef = doc(db, "orders", userId, "orders", String(data.orderId));
 
-          if (orderData.status === "Order Shipped") {
-            const orderRef = doc(
-              db,
-              "order",
-              updatedOrderData.userId,
-              "orders",
-              String(orderData.orderId)
-            );
-
-            await updateDoc(orderRef, {
+          promises.push(
+            updateDoc(orderRef, {
               status: "Order Delivered",
-              updateDate: new Date().toISOString(),
+              updateDate: serverTimestamp(),
               statusTimestamps: {
-                ...(orderData.statusTimestamps || {}),
+                ...ts,
                 "Order Delivered": new Date().toISOString(),
               },
-            });
-          }
+            }).catch((e) =>
+              console.error(`Failed Delivered ${data.orderId}:`, e)
+            )
+          );
         }
       });
 
-      // Wait for all updates to complete
-      await Promise.all(updatePromises);
-    } catch (error) {
-      console.error(
-        `Error updating order to Processing:`,
-        error.message
-      );
-    
+      await Promise.all(promises);
+      console.log(`updateToDelivered: ${promises.length} orders updated`);
+    } catch (e) {
+      console.error("updateToDelivered error:", e);
     }
-},
+  },
 };
 
 export default OrderUpdate;

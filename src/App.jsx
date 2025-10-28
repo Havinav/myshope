@@ -16,15 +16,17 @@ import Address from "./Pages/Address";
 import OrderUpdate from "./job/OrderJob";
 
 const App = () => {
-  setInterval(() => {
-    OrderUpdate.updateToProcessing();;
-  }, 12*60*60*10000); // Check every 12 hour
-   setInterval(() => {
-    OrderUpdate.updateToProcessing();;
-  }, 24*60*60*10000); // Check every 24 hour
-   setInterval(() => {
-    OrderUpdate.updateToProcessing();;
-  }, 36*60*60*10000); // Check every 36 hour
+  const FIVE_HOURS_MS = 5 * 60 * 60 * 1000;
+
+  // Then repeat every 5 hours
+setInterval(async () => {
+  console.log("Running scheduled order-status updates…");
+  await Promise.all([
+    OrderUpdate.updateToProcessing(),
+    OrderUpdate.updateToShipped(),
+    OrderUpdate.updateToDelivered(),
+  ]);
+}, 10000);
 
   const routes = createBrowserRouter([
     {

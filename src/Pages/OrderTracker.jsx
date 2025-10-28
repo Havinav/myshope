@@ -89,7 +89,7 @@ const OrderTracker = () => {
                 : ""
             }`}
           >
-            <div className="w-full mr-1 block z-10 flex flex-col items-center justify-start gap-1">
+            <div className="w-full mr-1  z-10 flex flex-col items-center justify-start gap-1">
               <div className="justify-center items-center gap-1.5 inline-flex">
                 <h5
                   className={`text-center text-lg font-medium leading-normal font-manrope ${
@@ -156,7 +156,7 @@ const OrderTracker = () => {
                 key={order.id}
                 className="mb-8 p-8 border rounded-xl shadow-md bg-white text-black font-manrope"
               >
-                <h2 className="text-2xl font-semibold text-gray-900 leading-9 pb-5 border-b border-gray-200">
+                <h2 className="text-1xl font-semibold text-gray-900 leading-9 pb-5 border-b border-gray-200">
                   Order ID #{order.orderId}
                 </h2>
                 <div className="flex flex-col sm:flex-row gap-4 mb-6 items-start sm:items-center">
@@ -184,21 +184,32 @@ const OrderTracker = () => {
                     </p>
                   </div>
                   <div className="flex justify-center items-center">
-                    <span className="font-bold text-gray-500">
-                      Payment Method: <span className="font-bold text-red-500">{String(order.paymentMode).toUpperCase()}</span>
+                    <span className="font-bold text-gray-900">
+                      Total: ${(order.price * order.quantity).toFixed(2)}
+                      <br/>
+                       
                     </span>
                   </div>
                   <div className="flex justify-center items-center">
-                    <span className="font-bold text-gray-900">
-                      Total: ${(order.price * order.quantity).toFixed(2)}
+                   <p>
+                    <span className="font-bold text-gray-500">
+                      Payment Method: <span className="font-bold text-red-500">{String(order.paymentMode).toUpperCase()}</span>
+                      <br/>
+                      Transection ID: <span className="text-orange-700">{order.txId}</span>
+                       <br/>
+                      
                     </span>
+                    </p>
                   </div>
+                  
                   <div>
                     <span className="text-gray-900 font-medium">Delivery to:</span>
                     <p className="text-gray-600 text-sm">
-                      {order.address.doorNo}, {order.address.street}, {order.address.city}, {order.address.district}, {order.address.state} - {order.address.pincode}
+                      &emsp;{order.address.doorNo}, {order.address.street}, {order.address.city}, {order.address.district}, {order.address.state} - {order.address.pincode}
                     </p>
+                   <span className="text-gray-600 "> Return Policy:</span> {order.returnPolicy}
                   </div>
+                   
                 </div>
                 <div>
                   <h4 className="text-sm font-semibold text-gray-700 mb-2">Order Status</h4>
