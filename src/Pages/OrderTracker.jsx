@@ -1,7 +1,12 @@
 // OrderTracker.jsx
 import React, { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
-import { collection, getDocs } from "firebase/firestore";
+import {
+  collection,
+  getDocs,
+  doc,
+  getDoc,
+} from "firebase/firestore";
 import { db } from "../firebase/firebase";
 import { toast } from "react-toastify";
 import { Link } from "react-router-dom";
@@ -9,216 +14,288 @@ import { Link } from "react-router-dom";
 const OrderTracker = () => {
   const user = useSelector((state) => state.user.userData);
   const [orders, setOrders] = useState([]);
+  const [paymentCache, setPaymentCache] = useState({});
   const [loading, setLoading] = useState(false);
 
-  // Define order statuses
+  // ── Status steps with image URLs ─────────────────────────────────────
   const statusSteps = [
-    { id: "Ordered", label: "Order Placed", icon: "🛒" },
-    { id: "Processing", label: "Order Processing", icon: "⚙️" },
-    { id: "Shipped", label: "Order Shipped", icon: "🚚" },
-    { id: "Delivered", label: "Order Delivered", icon: "📦" },
+    {
+      id: "Order Placed",
+      label: "Order Placed",
+      url: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT-ppG9lIR3EZrrl_eg0YbRwvX82rJ0_WsYJw&s",
+    },
+    {
+      id: "Order Processing",
+      label: "Order Processing",
+      url: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRliF12RAFx-IN-AuHqk2ULsBuTJ8DuxHCg8w&s",
+    },
+    {
+      id: "Order Shipped",
+      label: "Order Shipped",
+      url: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRFMtvO4De1-dA7YAcUVhayfnxJoFLpFcKV4Q&s",
+    },
+    {
+      id: "Order Delivered",
+      label: "Order Delivered",
+      url: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQwX8q2cP5utn1NBjhGofXdctqt7BGkxbPjYA&s",
+    },
   ];
 
-  // Fetch orders on mount
+  // ── Mount: fetch orders + payments ───────────────────────────────────
   useEffect(() => {
-    if (user?.id) {
-      fetchOrders();
-    } else {
+    if (user?.id) fetchOrdersAndPayments();
+    else
       toast.error("Please log in to view your orders", {
         position: "bottom-center",
         autoClose: 4000,
         theme: "dark",
       });
-    }
   }, [user?.id]);
 
-  const fetchOrders = async () => {
+  // ── Fetch orders + auto-fetch payments ───────────────────────────────
+  const fetchOrdersAndPayments = async () => {
     setLoading(true);
     try {
       const ordersRef = collection(db, "order", user.id, "orders");
-      const querySnapshot = await getDocs(ordersRef);
-      const ordersData = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      // Sort by orderDate (date and time) in descending order
-      const sortedOrders = ordersData.sort((a, b) => {
-        // Handle invalid or missing orderDate
-        const dateA = a.orderDate ? new Date(a.orderDate) : new Date(0); // Epoch for missing dates
-        const dateB = b.orderDate ? new Date(b.orderDate) : new Date(0);
-        // Extract date components (year, month, day)
-        const dateAYear = dateA.getFullYear();
-        const dateAMonth = dateA.getMonth();
-        const dateADay = dateA.getDate();
-        const dateBYear = dateB.getFullYear();
-        const dateBMonth = dateB.getMonth();
-        const dateBDay = dateB.getDate();
-        // Compare dates (year, month, day)
-        if (dateAYear !== dateBYear) return dateBYear - dateAYear;
-        if (dateAMonth !== dateBMonth) return dateBMonth - dateAMonth;
-        if (dateADay !== dateBDay) return dateBDay - dateADay;
-        // If dates are equal, compare times (full timestamp)
-        return dateB - dateA;
+      const snap = await getDocs(ordersRef);
+      const raw = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+
+      const sorted = raw.sort((a, b) => {
+        const da = a.orderDate ? new Date(a.orderDate) : new Date(0);
+        const db = b.orderDate ? new Date(b.orderDate) : new Date(0);
+        return db - da;
       });
-      setOrders(sortedOrders);
-    } catch (error) {
-      console.error("Error fetching orders:", error);
-      toast.error("Failed to fetch orders", {
-        position: "bottom-center",
-        autoClose: 2000,
-        theme: "dark",
-      });
+
+      setOrders(sorted);
+
+      const txIds = [...new Set(sorted.map((o) => o.txId).filter(Boolean))];
+      await Promise.all(txIds.map(fetchPayment));
+    } catch (err) {
+      console.error("fetchOrdersAndPayments error:", err);
+      toast.error("Failed to load orders", { theme: "dark" });
     } finally {
       setLoading(false);
     }
   };
 
-  // Render status tracker
+  // ── Fetch single payment (cached) ───────────────────────────────────
+  const fetchPayment = async (txId) => {
+    if (!txId || paymentCache[txId]) return;
+
+    try {
+      const payDoc = await getDoc(doc(db, "payment", user.id));
+      if (payDoc.exists() && payDoc.data().transactionId === txId) {
+        const data = payDoc.data();
+        setPaymentCache((c) => ({ ...c, [txId]: data }));
+      }
+    } catch (err) {
+      console.error("fetchPayment error:", err);
+    }
+  };
+
+  // ── Format ISO date ─────────────────────────────────────────────────
+  const formatDate = (iso) => {
+    if (!iso) return "----";
+    return new Date(iso).toLocaleString("en-US", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+  };
+
+  // ── Timeline: Show date only if past or today ───────────────────────
   const renderStatusTracker = (order) => {
-    const currentStatus = order.status;
-    const currentIndex = statusSteps.findIndex((step) => step.label === currentStatus);
+    const timestamps = order.statusTimestamps || {};
+    const now = new Date();
 
     return (
-      <ol className="flex md:flex-row flex-col md:items-start items-center justify-between w-full md:gap-1 gap-4">
-        {statusSteps.map((step, index) => (
-          <li
-            key={step.id}
-            className={`group flex relative justify-start ${
-              index < statusSteps.length - 1
-                ? `after:content-[''] lg:after:w-11 md:after:w-5 after:w-5 after:h-0.5 md:after:border after:border-dashed md:after:bg-gray-500 after:inline-block after:absolute md:after:top-7 after:top-3 xl:after:left-44 lg:after:left-40 md:after:left-36`
-                : ""
-            }`}
-          >
-            <div className="w-full mr-1  z-10 flex flex-col items-center justify-start gap-1">
-              <div className="justify-center items-center gap-1.5 inline-flex">
-                <h5
-                  className={`text-center text-lg font-medium leading-normal font-manrope ${
-                    index <= currentIndex ? "text-gray-900" : "text-gray-500"
-                  } whitespace-nowrap`}
-                >
-                  {step.label} {step.icon}
-                </h5>
-                {index <= currentIndex && (
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="20"
-                    height="20"
-                    viewBox="0 0 20 20"
-                    fill="none"
-                    className="inline-block"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      clipRule="evenodd"
-                      d="M1.83337 9.99992C1.83337 5.48959 5.48972 1.83325 10 1.83325C14.5104 1.83325 18.1667 5.48959 18.1667 9.99992C18.1667 14.5102 14.5104 18.1666 10 18.1666C5.48972 18.1666 1.83337 14.5102 1.83337 9.99992ZM14.3635 7.92721C14.6239 7.66687 14.6239 7.24476 14.3635 6.98441C14.1032 6.72406 13.6811 6.72406 13.4207 6.98441L9.82961 10.5755C9.53851 10.8666 9.3666 11.0365 9.22848 11.1419C9.17307 11.1842 9.13961 11.2029 9.1225 11.2107C9.1054 11.2029 9.07194 11.1842 9.01653 11.1419C8.87841 11.0365 8.7065 10.8666 8.4154 10.5755L7.13815 9.29825C6.8778 9.03791 6.45569 9.03791 6.19534 9.29825C5.93499 9.55861 5.93499 9.98071 6.19534 10.2411L7.50018 11.5459C7.75408 11.7999 7.98968 12.0355 8.20775 12.2019C8.44909 12.3861 8.74554 12.5469 9.1225 12.5469C9.49946 12.5469 9.79592 12.3861 10.0373 12.2019C10.2553 12.0355 10.4909 11.7999 10.7448 11.5459L14.3635 7.92721Z"
-                      fill="#047857"
-                    />
-                  </svg>
-                )}
+      <ol className="flex flex-row md:flex-row items-center justify-center gap-4 md:gap-4 relative">
+        {/* Dashed line (desktop) */}
+        <div className="hidden md:block absolute top-8 left-16 right-16 h-0.5 border-t border-dashed border-gray-400 pointer-events-none"></div>
+
+        {statusSteps.map((step, index) => {
+          const iso = timestamps[step.label];
+          const isPastOrToday = iso && new Date(iso) <= now;
+          const isCurrent = order.status === step.label;
+
+          return (
+            <li key={index} className="flex flex-col items-center flex-1 z-10">
+              {/* Image Icon */}
+              <div
+                className={`w-16 h-16 rounded-full overflow-hidden border-4 transition-all ${
+                  isPastOrToday || isCurrent
+                    ? "border-green-600 shadow-lg"
+                    : "border-gray-300"
+                }`}
+              >
+                <img
+                  src={step.url}
+                  alt={step.label}
+                  className="w-full h-full object-cover"
+                />
               </div>
-              <h6 className="text-center text-gray-500 text-base font-normal leading-relaxed font-manrope">
-                {order.statusTimestamps?.[step.label]
-                  ? new Date(order.statusTimestamps[step.label]).toLocaleString("en-US", {
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })
-                  : "--"}
-              </h6>
-            </div>
-          </li>
-        ))}
+
+              {/* Label */}
+              <h5
+                className={`mt-3 text-center text-sm font-medium ${
+                  isPastOrToday || isCurrent ? "text-gray-900" : "text-gray-500"
+                }`}
+              >
+                {step.label}
+              </h5>
+
+              {/* Date: Show only if past or today */}
+              <p className="mt-1 text-xs text-gray-600">
+                {isPastOrToday ? formatDate(iso) : "----"}
+              </p>
+
+              
+            </li>
+          );
+        })}
       </ol>
     );
   };
 
+  // ── Payment Info ───────────────────────────────────────────────────
+  const renderPaymentInfo = (order) => {
+    const payment = paymentCache[order.txId];
+
+    if (!payment) {
+      return <span className="text-xs text-gray-400">Loading payment…</span>;
+    }
+
+    return (
+      <div className="text-sm space-y-1 font-bold">
+        <p>
+          <strong className="text-gray-500">Method:</strong>{" "}
+          <span className="text-red-600">{payment.method?.toUpperCase() || "N/A"}</span>
+        </p>
+        <p>
+          <strong className="text-gray-500">Paid on:</strong>{" "}
+          <span className="text-red-600">{formatDate(payment.date)}</span>
+        </p>
+        <p>
+          <strong className="text-gray-500">Tx ID:</strong>{" "}
+          <span className="text-orange-700">{payment.transactionId}</span>
+        </p>
+        <p>
+          <strong className="text-gray-500">Total :</strong>{" "}
+          <span className="text-orange-700">$ {payment.amount?.toFixed(2)}</span>
+        </p>
+      </div>
+    );
+  };
+
+  // ── Main Render ─────────────────────────────────────────────────────
   return (
-    <div className="mt-29 md:mt-20">
-      <div className="p-4">
+    <div className="mt-28 md:mt-20 min-h-screen py-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Loading Spinner */}
         {loading && (
-          <div className="w-full bg-gray-200 rounded-full h-2.5 mb-6 overflow-hidden">
-            <div className="bg-blue-600 h-2.5 rounded-full animate-indeterminate"></div>
+          <div className="flex flex-col items-center justify-center py-20 space-y-4">
+            <div className="relative w-16 h-16">
+              <div className="absolute inset-0 border-4 border-gray-200 rounded-full"></div>
+              <div className="absolute inset-0 border-4 border-indigo-600 rounded-full border-t-transparent animate-spin"></div>
+            </div>
+            <p className="text-sm font-medium text-gray-700 animate-pulse">
+              Fetching your orders...
+            </p>
           </div>
         )}
-        <div>
-          {orders.length === 0 && !loading ? (
-            <p className="text-center text-gray-500 font-manrope">
-              No orders found.{" "}
-              <Link to="/s" className="text-blue-500 hover:underline">
-                Shop now
-              </Link>
-            </p>
-          ) : (
-            orders.map((order) => (
-              <div
-                key={order.id}
-                className="mb-8 p-8 border rounded-xl shadow-md bg-white text-black font-manrope"
-              >
-                <h2 className="text-1xl font-semibold text-gray-900 leading-9 pb-5 border-b border-gray-200">
-                  Order ID #{order.orderId}
-                </h2>
-                <div className="flex flex-col sm:flex-row gap-4 mb-6 items-start sm:items-center">
-                  <div>
-                    <img
-                      src={order.thumbnail}
-                      alt={order.title}
-                      className="w-24 h-24 sm:w-32 sm:h-32 object-contain rounded-md"
-                      onError={(e) => (e.target.src = "/fallback-image.png")}
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-gray-900">{order.title}</h3>
-                    <p className="text-gray-600 text-sm">Quantity: {order.quantity}</p>
-                    <p className="text-gray-600 text-sm">
-                      Price: ${order.price.toFixed(2)} x {order.quantity} = ${(order.price * order.quantity).toFixed(2)}
-                    </p>
-                    {order.discountPercentage && (
-                      <p className="text-sm text-green-600">
-                        Discount: {order.discountPercentage.toFixed(2)}%
-                      </p>
-                    )}
-                    <p className="text-gray-600 text-sm">
-                      Delivery by: {order.shippingInformation || "7-10 days"}
-                    </p>
-                  </div>
-                  <div className="flex justify-center items-center">
-                    <span className="font-bold text-gray-900">
-                      Total: ${(order.price * order.quantity).toFixed(2)}
-                      <br/>
-                       
-                    </span>
-                  </div>
-                  <div className="flex justify-center items-center">
-                   <p>
-                    <span className="font-bold text-gray-500">
-                      Payment Method: <span className="font-bold text-red-500">{String(order.paymentMode).toUpperCase()}</span>
-                      <br/>
-                      Transection ID: <span className="text-orange-700">{order.txId}</span>
-                       <br/>
-                      
-                    </span>
-                    </p>
-                  </div>
-                  
-                  <div>
-                    <span className="text-gray-900 font-medium">Delivery to:</span>
-                    <p className="text-gray-600 text-sm">
-                      &emsp;{order.address.doorNo}, {order.address.street}, {order.address.city}, {order.address.district}, {order.address.state} - {order.address.pincode}
-                    </p>
-                   <span className="text-gray-600 "> Return Policy:</span> {order.returnPolicy}
-                  </div>
-                   
-                </div>
+
+        {/* No orders */}
+        {orders.length === 0 && !loading && (
+          <p className="text-center text-gray-600">
+            No orders yet.{" "}
+            <Link to="/" className="text-blue-600 hover:underline">
+              Start shopping
+            </Link>
+          </p>
+        )}
+
+        {/* Orders */}
+        {orders.map((order) => (
+          <div
+            key={order.id}
+            className="mb-10 bg-white  rounded-xl shadow-lg overflow-hidden"
+          >
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 sm:p-6 border-b bg-gray-100">
+              <h2 className="text-md font-bold text-gray-900">
+                Order ID:{" "}
+                <span className="text-indigo-600">#{order.orderId}</span>
+              </h2>
+              <div className="mt-2 sm:mt-0 text-sm text-gray-600">
+                Ordered on: <strong>{formatDate(order.orderDate)}</strong>
+              </div>
+            </div>
+
+            {/* Body: 4-column layout */}
+            <div className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-4 gap-6  justify-between">
+              {/* 1. Product */}
+              <div className="flex items-start gap-4">
+                <img
+                  src={order.thumbnail}
+                  alt={order.title}
+                  className="w-20 h-20 md:w-28 md:h-28 object-contain rounded-lg shadow"
+                  onError={(e) => (e.target.src = "/fallback-image.png")}
+                />
                 <div>
-                  <h4 className="text-sm font-semibold text-gray-700 mb-2">Order Status</h4>
-                  {renderStatusTracker(order)}
+                  <h3 className="font-semibold text-gray-900">{order.title}</h3>
+                  <p className="text-sm text-gray-600">
+                    Qty: <strong>{order.quantity}</strong>
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    Unit: ${order.price.toFixed(2)}
+                  </p>
+                  {order.discountPercentage && (
+                    <p className="text-xs text-green-600">
+                      -{order.discountPercentage.toFixed(1)}% off
+                    </p>
+                  )}
                 </div>
               </div>
-            ))
-          )}
-        </div>
+
+              {/* 2. Address */}
+              <div>
+                <p className="font-medium text-gray-800 mb-1">Deliver to:</p>
+                <p className="text-sm text-gray-600">
+                  {order.address.doorNo}, {order.address.street},
+                  <br />
+                  {order.address.city}, {order.address.district},
+                  <br />
+                  {order.address.state} - {order.address.pincode}
+                </p>
+                {order.returnPolicy && (
+                  <p className="text-xs text-gray-500 mt-2">
+                    Return Policy: {order.returnPolicy}
+                  </p>
+                )}
+              </div>
+
+              {/* 3. Payment Details */}
+              <div>
+                <p className="font-medium text-gray-800 mb-1">Payment Details:</p>
+                {renderPaymentInfo(order)}
+              </div>
+
+              {/* 4. Empty (for spacing) */}
+              <div className="hidden md:block"></div>
+            </div>
+
+            {/* Status Tracker */}
+            <div className="border-t p-6 bg-gray-100">
+              <h4 className="text-lg font-semibold text-gray-800 mb-6 text-center md:text-left">
+                Order Status
+              </h4>
+              {renderStatusTracker(order)}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

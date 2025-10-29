@@ -16,17 +16,7 @@ import Address from "./Pages/Address";
 import OrderUpdate from "./job/OrderJob";
 
 const App = () => {
-  const FIVE_HOURS_MS = 5 * 60 * 60 * 1000;
-
-  // Then repeat every 5 hours
-setInterval(async () => {
-  console.log("Running scheduled order-status updates…");
-  await Promise.all([
-    OrderUpdate.updateToProcessing(),
-    OrderUpdate.updateToShipped(),
-    OrderUpdate.updateToDelivered(),
-  ]);
-}, 10000);
+  
 
   const routes = createBrowserRouter([
     {

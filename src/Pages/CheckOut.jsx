@@ -159,7 +159,7 @@ const CheckOut = () => {
           transactionId: txId,
         };
         await setDoc(doc(db, "payment", user.id), paymentInfo);
-         saveOrderDetails(txId);
+        saveOrderDetails(txId);
         setPaymentModalOpen(false);
         setPaymentDetails({ cardNumber: "", expiry: "", cvv: "", upiId: "" });
         Swal.fire({
@@ -189,6 +189,21 @@ const CheckOut = () => {
 
   // Save order details
   const saveOrderDetails = async (txId) => {
+    const now = new Date();
+    const orderPlaced = now.toISOString();
+    // Helper to add days and return ISO string
+    const addDays = (date, days) => {
+      const result = new Date(date);
+      result.setDate(result.getDate() + days);
+      return result.toISOString();
+    };
+
+    const statusTimestamps = {
+      "Order Placed": orderPlaced,
+      "Order Processing": addDays(now, 1),
+      "Order Shipped": addDays(now, 2),
+      "Order Delivered": addDays(now, 3),
+    };
     try {
       for (const item of cartItems) {
         const orderId = `OD${Math.floor(Math.random() * 10000000000)}`;
@@ -199,15 +214,10 @@ const CheckOut = () => {
           address: address,
           paymentMode: paymentMethod.toUpperCase(),
           txId: txId,
-          orderDate: new Date().toISOString(),
-          updateDate: new Date().toISOString(),
+          orderDate: orderPlaced,
+          updateDate: orderPlaced,
           status: "Order Placed",
-          statusTimestamps: {
-            "Order Placed": new Date().toISOString(),
-            "Order Processing": null,
-            "Order Shipped": null,
-            "Order Delivered": null,
-          },
+          statusTimestamps,
         };
         await setDoc(
           doc(db, "order", user.id, "orders", orderId),
@@ -218,6 +228,7 @@ const CheckOut = () => {
           title: `Order placed successfully!`,
           timer: 1000,
         });
+
         dispatch(removeProductAsync({ productId: item.id, userId: user.id }));
       }
     } catch (error) {
